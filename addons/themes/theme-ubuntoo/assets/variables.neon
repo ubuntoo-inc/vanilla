@@ -15,16 +15,16 @@
             ## Used for the background of modals, dropdowns, the page, and various containers.
             bg: "#173042",
             ## Primary brand color
-            # primary: "#0291DB",
+            primary: "#2A8351",
             ## Secondary brand color. Used for various accents.
-            # secondary: "#028BD3" (generated default),
+            secondary: "#173042" (generated default),
         },
         body: {
             backgroundImage: {
                 ## Body background color.
                 ## You may want to set this rather than setting the main bg.
                 ## Default generated based on mainColors.bg
-                # color: "#FFFFFF",
+                color: "#173042",
             },
         },
         ##
@@ -106,32 +106,32 @@
         ## See https:#success.vanillaforums.com/kb/articles/142-navigation-links#customizing-navigation-links
         ##
         navItems: {
-            # default: [
-            # {
-            #     to: "/discussions",
-            #     children: "Discussions",
-            # },
-            # {
-            #     to: "/categories",
-            #     children: "Categories",
-            # },
-            # {
-            #     to: "/home",
-            #     children: "Categories",
-            # },
-            # {
-            #     children: "Help",
-            #     permission: "kb.view",
-            #     to: "/kb",
-            # },
-            # ],
+            default: [
+            {
+                 to: "/discussions",
+                 children: "Discussions",
+            },
+            {
+                 to: "/categories",
+                 children: "Categories",
+            },
+            {
+                 to: "/home",
+                 children: "Categories",
+            },
+            {
+                 children: "Help",
+                 permission: "kb.view",
+                 to: "/kb",
+            },
+            ],
             ## Some other languages
             # en: [],
             # fr: [],
             # cz: [],
         },
         logo: {
-            url: "https://app.ubuntoo.com/img/ubuntoo-white.svg",
+            #url: "https://app.sandbox.ubuntoo.com",
         },
     },
     banner: {
@@ -321,7 +321,7 @@
 
             ## URL to a logo.
             desktop: {
-                # url: "https:#mysite.com/path/to/logo.png",
+                url: "https://cdn.ubuntoo.com/ubuntoo-logo.png",
             },
 
             ## Some vertical padding around the logo.
