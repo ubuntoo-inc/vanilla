@@ -161,6 +161,26 @@ $embedOperations = '[
             }
         }
     },
+    { "insert": "Ubuntoo:" },
+    { "attributes": { "header": 3 }, "insert": "\n" },
+    {
+        "insert": {
+            "embed-external": {
+                "data": {
+                    "url": "https://app.ubuntoo.com/",
+                    "type": "link",
+                    "name": "The Environmental Solutions Company",
+                    "body":
+                        "We believe that the world's biggest environmental issues can indeed be solved. By connecting individuals through an online platform, our mission is to accelerate sustainable solutions for collaboration and global impact.",
+                    "photoUrl": "https://cdn.ubuntoo.com/ubuntoo-icon-final1.svg",
+                    "height": null,
+                    "width": null,
+                    "attributes": []
+                },
+                "loaderData": { "type": "link", "link": "https://app.ubuntoo.com/", "loaded": true }
+            }
+        }
+    },
     { "insert": "Instagram:" },
     { "attributes": { "header": 3 }, "insert": "\n" },
     {

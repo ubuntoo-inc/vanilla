@@ -34,6 +34,8 @@ use Vanilla\EmbeddedContent\Factories\TwitchEmbedFactory;
 use Vanilla\EmbeddedContent\Embeds\TwitchEmbed;
 use Vanilla\EmbeddedContent\Factories\YouTubeEmbedFactory;
 use Vanilla\EmbeddedContent\Embeds\YouTubeEmbed;
+use Vanilla\EmbeddedContent\Factories\UbuntooEmbedFactory;
+use Vanilla\EmbeddedContent\Embeds\UbuntooEmbed;
 use Vanilla\EmbeddedContent\Factories\KalturaEmbedFactory;
 use Vanilla\EmbeddedContent\Embeds\KalturaEmbed;
 use Vanilla\EmbeddedContent\Factories\WistiaEmbedFactory;
@@ -190,6 +192,9 @@ class EmbedService implements EmbedCreatorInterface {
             // YouTube
             ->registerFactory($dic->get(YouTubeEmbedFactory::class))
             ->registerEmbed(YouTubeEmbed::class, YouTubeEmbed::TYPE)
+            // Ubuntoo
+            ->registerFactory($dic->get(UbuntooEmbedFactory::class))
+            ->registerEmbed(UbuntooEmbed::class, UbuntooEmbed::TYPE)
             // Kaltura
             ->registerFactory($dic->get(KalturaEmbedFactory::class))
             ->registerEmbed(KalturaEmbed::class, KalturaEmbed::TYPE)
@@ -272,6 +277,8 @@ class EmbedService implements EmbedCreatorInterface {
 
         // Normalize the encoding on the URL.
         $url = (string)UrlUtils::normalizeEncoding(Http::createFromString($url));
+
+        console.log($url);
 
         // Check the cache first.
         if (!$force) {

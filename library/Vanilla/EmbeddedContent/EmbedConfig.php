@@ -22,6 +22,9 @@ class EmbedConfig {
     private $isYoutubeEnabled;
 
     /** @var bool */
+    private $isUbuntooEnabled;
+
+    /** @var bool */
     private $isVimeoEnabled;
 
     /** @var bool */
@@ -38,6 +41,7 @@ class EmbedConfig {
     public function __construct(ConfigurationInterface $config) {
         $this->areEmbedsEnabled = !$config->get('Garden.Format.DisableUrlEmbeds', false);
         $this->isYoutubeEnabled = $config->get('Garden.Format.YouTube', false);
+        $this->$isUbuntooEnabled = $config->get('Garden.Format.Ubuntoo', true);
         $this->isVimeoEnabled = $config->get('Garden.Format.Vimeo', false);
         $this->isGettyEnabled = $config->get('Garden.Format.Getty', true);
         $this->legacyEmbedSize = config('Garden.Format.EmbedSize', 'normal');
@@ -55,6 +59,13 @@ class EmbedConfig {
      */
     public function isYoutubeEnabled(): bool {
         return $this->isYoutubeEnabled;
+    }
+
+    /**
+     * @return bool
+     */
+    public function isUbuntooEnabled(): bool {
+        return $this->isUbuntooEnabled;
     }
 
     /**
