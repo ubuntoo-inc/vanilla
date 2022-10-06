@@ -47,7 +47,7 @@ class UbuntooEmbedFactory extends AbstractEmbedFactory {
      * @inheritdoc
      */
     protected function getSupportedPathRegex(string $domain): string {
-        return "`^/s/`";
+        return "`^/s(olutions)/`";
     }
 
     /**
