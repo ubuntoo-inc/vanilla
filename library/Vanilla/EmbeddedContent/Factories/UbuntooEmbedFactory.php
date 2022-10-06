@@ -9,7 +9,6 @@ namespace Vanilla\EmbeddedContent\Factories;
 use Garden\Http\HttpClient;
 use Vanilla\EmbeddedContent\AbstractEmbed;
 use Vanilla\EmbeddedContent\AbstractEmbedFactory;
-use Vanilla\EmbeddedContent\Embeds\UbuntooEmbed;
 use Vanilla\EmbeddedContent\Embeds\LinkEmbed;
 
 /**

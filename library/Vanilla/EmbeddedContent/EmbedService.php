@@ -35,7 +35,6 @@ use Vanilla\EmbeddedContent\Embeds\TwitchEmbed;
 use Vanilla\EmbeddedContent\Factories\YouTubeEmbedFactory;
 use Vanilla\EmbeddedContent\Embeds\YouTubeEmbed;
 use Vanilla\EmbeddedContent\Factories\UbuntooEmbedFactory;
-use Vanilla\EmbeddedContent\Embeds\UbuntooEmbed;
 use Vanilla\EmbeddedContent\Factories\KalturaEmbedFactory;
 use Vanilla\EmbeddedContent\Embeds\KalturaEmbed;
 use Vanilla\EmbeddedContent\Factories\WistiaEmbedFactory;
@@ -194,7 +193,6 @@ class EmbedService implements EmbedCreatorInterface {
             ->registerEmbed(YouTubeEmbed::class, YouTubeEmbed::TYPE)
             // Ubuntoo
             ->registerFactory($dic->get(UbuntooEmbedFactory::class))
-            ->registerEmbed(UbuntooEmbed::class, UbuntooEmbed::TYPE)
             // Kaltura
             ->registerFactory($dic->get(KalturaEmbedFactory::class))
             ->registerEmbed(KalturaEmbed::class, KalturaEmbed::TYPE)
