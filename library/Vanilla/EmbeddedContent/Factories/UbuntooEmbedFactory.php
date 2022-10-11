@@ -51,7 +51,7 @@ class UbuntooEmbedFactory extends AbstractEmbedFactory {
      * @inheritdoc
      */
     protected function getSupportedPathRegex(string $domain): string {
-        return "`^/s(olutions)/`";
+        return "`^/s|k/`";
     }
 
     /**
@@ -60,22 +60,22 @@ class UbuntooEmbedFactory extends AbstractEmbedFactory {
      * @inheritdoc
      */
     public function createEmbedForUrl(string $url): AbstractEmbed {
-        return $this->queryGraphQL($url);
+        return $this->parseType($url);
     }
 
     /**
-     * Scrape an HTML page.
+     * Form graphql query based on type.
      *
-     * @param string $url
+     * @param string $contentUrl
      * @return LinkEmbed
      *
      * @throws \Garden\Schema\ValidationException If there's not enough / incorrect data to make an embed.
      * @throws \Exception If the scrape fails.
      */
-    private function queryGraphQL(string $solutionUrl): LinkEmbed {
+    private function parseType(string $contentUrl): LinkEmbed {
 
-        $query = <<<'GQL'
-        query solutionByUrl($url: String!) {
+        $solutionQuery = <<<'SGQL'
+            query solutionByUrl($url: String!) {
                 solutionByUrl (url: $url) {
                     id
                     url
@@ -139,14 +139,74 @@ class UbuntooEmbedFactory extends AbstractEmbedFactory {
                     }
                 }
             }
-        GQL;
+        SGQL;
+
+        $knowledgeQuery = <<<'KGQL'
+            query knowledgeByUrl($url: String!) {
+                knowledgeByUrl(url: $url) {
+                    id
+                    url
+                    title
+                    body
+                    name
+                    summary
+                    partOf
+                    status
+                    date
+                    bannerImageUrl
+                    thumbImageUrl
+                    keywordTags
+                    authors {
+                      name
+                      title
+                      image
+                      shortBio
+                    }
+                    categories
+                    industries
+                    greenhouses
+                    sourceUrl
+                    comments {
+                        id
+                        body
+                        createdDate
+                        firstName
+                        lastName
+                        email
+                    }
+                  }
+            }
+        KGQL;
+
+        $path = parse_url($contentUrl, PHP_URL_PATH);
+        $contentType = explode('/', $path)[1];
+
+        if ($contentType == 'solutions' || $contentType == 's') {
+            return $this->queryGraphQL($contentUrl, 'solutionByUrl', $solutionQuery);
+        } else {
+            return $this->queryGraphQL($contentUrl, 'knowledgeByUrl', $knowledgeQuery);
+        }
+    }
+
+    /**
+     * Query graphql.
+     *
+     * @param string $contentUrl
+     * @param string $operationName
+     * @param string $query
+     * @return LinkEmbed
+     *
+     * @throws \Garden\Schema\ValidationException If there's not enough / incorrect data to make an embed.
+     * @throws \Exception If the scrape fails.
+     */
+    private function queryGraphQL(string $contentUrl, string $operationName, string $query): LinkEmbed {
 
         $graphqlEndpoint = 'https://app.ubuntoo.com/api/graphql';
 
         $client = new \GuzzleHttp\Client();
 
         $variables = [
-            'url' => basename($solutionUrl)
+            'url' => basename($contentUrl)
         ];
 
         $response = $client->request('POST', $graphqlEndpoint, [
@@ -154,7 +214,7 @@ class UbuntooEmbedFactory extends AbstractEmbedFactory {
             // include any auth tokens here
           //],
           'json' => [
-            'operationName' => 'solutionByUrl',
+            'operationName' => $operationName,
             'variables' => $variables,
             'query' => $query
           ],
@@ -163,14 +223,26 @@ class UbuntooEmbedFactory extends AbstractEmbedFactory {
 
         $json = $response->getBody()->getContents();
         $body = json_decode($json);
-        $solution = $body->data->solutionByUrl;
+        $content = $body->data->$operationName;
+
+
+        if ($operationName == 'solutionByUrl') {
+            $shortDesc = $content->shortBio;
+            $photoUrl = $content->bannerImageUrl;
+        }
+
+        if ($operationName == 'knowledgeByUrl') {
+            $shortDesc = $content->title;
+            $photoUrl = $content->thumbImageUrl;
+        }
+
 
         $data = [
             "embedType" => LinkEmbed::TYPE,
-            "url" => $solutionUrl,
-            "name" => $solution->name,
-            "body" => $solution->shortBio,
-            "photoUrl" => $solution->bannerImageUrl,
+            "url" => $contentUrl,
+            "name" => $content->name,
+            "body" => $shortDesc,
+            "photoUrl" => $photoUrl,
         ];
 
         $linkEmbed = new LinkEmbed($data);
