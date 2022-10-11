@@ -10,6 +10,7 @@ use Garden\Http\HttpClient;
 use Vanilla\EmbeddedContent\AbstractEmbed;
 use Vanilla\EmbeddedContent\AbstractEmbedFactory;
 use Vanilla\EmbeddedContent\Embeds\LinkEmbed;
+use Vanilla\PageScraper;
 
 /**
  * Factory for YouTubeEmbed.
@@ -24,6 +25,9 @@ class UbuntooEmbedFactory extends AbstractEmbedFactory {
 
     /** @var HttpClient */
     private $httpClient;
+
+    /** @var PageScraper */
+    private $pageScraper;
 
     /**
      * DI.
@@ -56,80 +60,126 @@ class UbuntooEmbedFactory extends AbstractEmbedFactory {
      * @inheritdoc
      */
     public function createEmbedForUrl(string $url): AbstractEmbed {
-        $videoID = $this->solutionFromUrl($url);
+        return $this->queryGraphQL($url);
+    }
 
-        $response = $this->httpClient->get(
-            self::OEMBED_URL_BASE,
-            ["url" => $url]
-        );
+    /**
+     * Scrape an HTML page.
+     *
+     * @param string $url
+     * @return LinkEmbed
+     *
+     * @throws \Garden\Schema\ValidationException If there's not enough / incorrect data to make an embed.
+     * @throws \Exception If the scrape fails.
+     */
+    private function queryGraphQL(string $solutionUrl): LinkEmbed {
 
-        // Example Response JSON
-        // phpcs:disable Generic.Files.LineLength
-        // {
-        //     "type": "video",
-        //     "provider_url": "https://www.youtube.com/",
-        //     "thumbnail_url": "https://i.ytimg.com/vi/hCeNC1sfEMM/hqdefault.jpg",
-        //     "author_name": "2ndJerma",
-        //     "author_url": "https://www.youtube.com/channel/UCL7DDQWP6x7wy0O6L5ZIgxg",
-        //     "version": "1.0",
-        //     "provider_name": "Ubuntoo",
-        //     "html": "<iframe width=\"480\" height=\"270\" src=\"https://www.youtube.com/embed/hCeNC1sfEMM?feature=oembed\" frameborder=\"0\" allow=\"accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture\" allowfullscreen></iframe>",
-        //     "thumbnail_height": 360,
-        //     "thumbnail_width": 480,
-        //     "title": "The Best of 2018",
-        //     "width": 480,
-        //     "height": 270
-        // }
-        // phpcs:enable Generic.Files.LineLength
+        $query = <<<'GQL'
+        query solutionByUrl($url: String!) {
+                solutionByUrl (url: $url) {
+                    id
+                    url
+                    companyUrl
+                    name
+                    shortBio
+                    about
+                    companyName
+                    status
+                    partOf
+                    stageOfDevelopment
+                    organizationType
+                    detailedSpecs
+                    createdAt
+                    updatedAt
+                    yearFounded
+                    location
+                    companyImageUrl
+                    bannerImageUrl
+                    thumbImageUrl
+                    stages {
+                      id
+                      stage
+                    }
+                    topics
+                    seekings
+                    valueChainImpacts
+                    innovators
+                    keywordTags
+                    keyContacts {
+                      name
+                      title
+                      image
+                      shortBio
+                    }
+                    greenhouses
+                    newsItems {
+                      id
+                      title
+                      source
+                      description
+                      pageContent
+                      location
+                      partOf
+                      status
+                      newsDate
+                      externalUrl
+                      featuredImageUrl
+                      keywordTags
+                      topics
+                      stages
+                      greenhouses
+                    }
+                    comments {
+                        id
+                        body
+                        createdDate
+                        firstName
+                        lastName
+                        email
+                    }
+                }
+            }
+        GQL;
 
-        $parameters = [];
-        parse_str(parse_url($url, PHP_URL_QUERY) ?? "", $parameters);
+        $graphqlEndpoint = 'https://app.ubuntoo.com/api/graphql';
+
+        $client = new \GuzzleHttp\Client();
+
+        $variables = [
+            'url' => basename($solutionUrl)
+        ];
+
+        $response = $client->request('POST', $graphqlEndpoint, [
+          //'headers' => [
+            // include any auth tokens here
+          //],
+          'json' => [
+            'operationName' => 'solutionByUrl',
+            'variables' => $variables,
+            'query' => $query
+          ],
+        ]);
+
+
+        $json = $response->getBody()->getContents();
+        $body = json_decode($json);
+        $solution = $body->data->solutionByUrl;
 
         $data = [
             "embedType" => LinkEmbed::TYPE,
-            "url" => "https://app.ubuntoo.com/solutions/sippy",
-            "name" => "Sippy",
-            "body" => "Automatic beverage dispenser for restaurants and fast food companies",
-            "photoUrl" => "https://d2jb9xtezsiuu6.cloudfront.net/uploads/solution/company_image/8388/company_image_T20221005054235.jpeg",
+            "url" => $solutionUrl,
+            "name" => $solution->name,
+            "body" => $solution->shortBio,
+            "photoUrl" => $solution->bannerImageUrl,
         ];
 
         $linkEmbed = new LinkEmbed($data);
-        $linkEmbed->setCacheable(!empty($scraped['isCacheable']));
+        $linkEmbed->setCacheable(true);
+
 
         return $linkEmbed;
     }
 
-    /**
-     * Get a YouTube URL's time value and convert it to seconds (e.g. 2m8s to 128).
-     *
-     * @param string $url
-     * @return int|null
-     */
-    private function startTime(string $url): ?int {
-        $parameters = [];
-        $fragment = parse_url($url, PHP_URL_FRAGMENT);
-        parse_str(parse_url($url, PHP_URL_QUERY) ?? "", $parameters);
-
-        if (!is_string($fragment) && empty($parameters)) {
-            return null;
-        }
-
-        if (preg_match("/t=(?P<start>\d+)/", $fragment, $timeParts)) {
-            return (int)$timeParts["start"];
-        }
-
-        if (preg_match("/^(?:(?P<ticks>\d+)|(?:(?P<minutes>\d*)m)?(?:(?P<seconds>\d*)s)?)$/", $parameters["t"] ?? "", $timeParts)) {
-            if (array_key_exists("ticks", $timeParts) && $timeParts["ticks"] !== "") {
-                return $timeParts["ticks"];
-            } else {
-                $minutes = $timeParts["minutes"] ? (int)$timeParts["minutes"] : 0;
-                $seconds = $timeParts["seconds"] ? (int)$timeParts["seconds"] : 0;
-                return ($minutes * 60) + $seconds;
-            }
-        }
-
-        return null;
-    }
 
     /**
      * Given a Ubuntoo Solution URL, extract its slug.
