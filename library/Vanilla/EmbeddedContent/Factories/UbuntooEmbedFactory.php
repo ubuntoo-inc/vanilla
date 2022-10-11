@@ -181,11 +181,22 @@ class UbuntooEmbedFactory extends AbstractEmbedFactory {
         $path = parse_url($contentUrl, PHP_URL_PATH);
         $contentType = explode('/', $path)[1];
 
+        //$shortDesc = '';
+        //$photoUrl = '';
+
         if ($contentType == 'solutions' || $contentType == 's') {
-            return $this->queryGraphQL($contentUrl, 'solutionByUrl', $solutionQuery);
+            $content = $this->queryGraphQL($contentUrl, 'solutionByUrl', $solutionQuery);
+
+
+            $shortDesc = $content->shortBio;
+            $photoUrl = $content->bannerImageUrl;
         } else {
-            return $this->queryGraphQL($contentUrl, 'knowledgeByUrl', $knowledgeQuery);
+            $content = $this->queryGraphQL($contentUrl, 'knowledgeByUrl', $knowledgeQuery);
+            $shortDesc = $content->title;
+            $photoUrl = $content->thumbImageUrl;
         }
+
+        return $this->constructLinkEmbed($contentUrl, $content, $shortDesc, $photoUrl);
     }
 
     /**
@@ -199,7 +210,7 @@ class UbuntooEmbedFactory extends AbstractEmbedFactory {
      * @throws \Garden\Schema\ValidationException If there's not enough / incorrect data to make an embed.
      * @throws \Exception If the scrape fails.
      */
-    private function queryGraphQL(string $contentUrl, string $operationName, string $query): LinkEmbed {
+    private function queryGraphQL(string $contentUrl, string $operationName, string $query): object {
 
         $graphqlEndpoint = 'https://app.ubuntoo.com/api/graphql';
 
@@ -225,18 +236,20 @@ class UbuntooEmbedFactory extends AbstractEmbedFactory {
         $body = json_decode($json);
         $content = $body->data->$operationName;
 
-
-        if ($operationName == 'solutionByUrl') {
-            $shortDesc = $content->shortBio;
-            $photoUrl = $content->bannerImageUrl;
-        }
-
-        if ($operationName == 'knowledgeByUrl') {
-            $shortDesc = $content->title;
-            $photoUrl = $content->thumbImageUrl;
-        }
+        return $content;
+    }
 
 
+    /**
+     * Construct a linkembed using provided data fields.
+     *
+     * @param string $contentUrl
+     * @param object $content
+     * @param string $shortDesc
+     * @param string $photoUrl
+     * @return LinkEmbed
+     */
+    private function constructLinkEmbed(string $contentUrl, object $content, string $shortDesc, string $photoUrl): LinkEmbed {
         $data = [
             "embedType" => LinkEmbed::TYPE,
             "url" => $contentUrl,
@@ -250,27 +263,5 @@ class UbuntooEmbedFactory extends AbstractEmbedFactory {
 
 
         return $linkEmbed;
-    }
-
-
-    /**
-     * Given a Ubuntoo Solution URL, extract its slug.
-     *
-     * @param string $url
-     * @return string|null
-     */
-    private function solutionFromUrl(string $url): ?string {
-        $host = parse_url($url, PHP_URL_HOST);
-
-        if ($host === self::SHORT_DOMAIN) {
-            $path = parse_url($url, PHP_URL_PATH) ?? "";
-            return preg_match("`^/?(?<videoID>[\w-]{11})`", $path, $matches) ? $matches["videoID"] : null;
-        } else {
-            $parameters = [];
-            parse_str(parse_url($url, PHP_URL_QUERY) ?? "", $parameters);
-            return $parameters["v"] ?? null;
-        }
-
-        return null;
     }
 }
