@@ -212,7 +212,7 @@ class UbuntooEmbedFactory extends AbstractEmbedFactory {
      */
     private function queryGraphQL(string $contentUrl, string $operationName, string $query): object {
 
-        $graphqlEndpoint = 'https://app.ubuntoo.com/api/graphql';
+        $graphqlEndpoint = getenv('REACT_APP_API_HOST') .'/api/graphql';
 
         $client = new \GuzzleHttp\Client();
 
