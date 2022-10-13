@@ -13,18 +13,18 @@
             fg: "#2A8351",
             ## Primary background color.
             ## Used for the background of modals, dropdowns, the page, and various containers.
-            bg: "#173042",
+            #bg: "#173042",
             ## Primary brand color
             primary: "#2A8351",
             ## Secondary brand color. Used for various accents.
-            secondary: "#173042" (generated default),
+            #secondary: "#173042" (generated default),
         },
         body: {
             backgroundImage: {
                 ## Body background color.
                 ## You may want to set this rather than setting the main bg.
                 ## Default generated based on mainColors.bg
-                color: "#173042",
+                #color: "#173042",
             },
         },
         ##
@@ -94,10 +94,10 @@
             colors: {
                 default: "#2A8351",
                 ## By default all of these will be generated as an offset from the default.
-                # hover: "#028AD0",
-                # focus: "#028AD0",
-                # keyboardFocus: "#028AD0",
-                # active: "#028AD0",
+                hover: "#2A8351",
+                focus: "#2A8351",
+                keyboardFocus: "#2A8351",
+                active: "#2A8351",
             },
         },
     },
