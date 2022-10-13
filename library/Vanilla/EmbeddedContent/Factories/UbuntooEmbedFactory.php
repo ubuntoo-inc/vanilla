@@ -17,11 +17,11 @@ use Vanilla\PageScraper;
  */
 class UbuntooEmbedFactory extends AbstractEmbedFactory {
 
-    const SHORT_DOMAIN = "app.ubuntoo.com";
+    const SHORT_DOMAIN = "ubuntoo.com";
 
-    const PRIMARY_DOMAINS = ["app.ubuntoo.com"];
+    const PRIMARY_DOMAINS = ["ubuntoo.com"];
 
-    const OEMBED_URL_BASE = "https://app.ubuntoo.com";
+    //const OEMBED_URL_BASE = "https://app.ubuntoo.com";
 
     /** @var HttpClient */
     private $httpClient;
