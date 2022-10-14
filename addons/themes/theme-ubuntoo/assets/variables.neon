@@ -10,14 +10,14 @@
         },
         mainColors: {
             ## Primary foreground color. Used for text and icons.
-            fg: "#2A8351",
+            #fg: "#173042",
             ## Primary background color.
             ## Used for the background of modals, dropdowns, the page, and various containers.
             #bg: "#173042",
             ## Primary brand color
             primary: "#2A8351",
             ## Secondary brand color. Used for various accents.
-            #secondary: "#173042" (generated default),
+            secondary: "#173042" (generated default),
         },
         body: {
             backgroundImage: {
