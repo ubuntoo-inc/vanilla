@@ -46,13 +46,6 @@ export default class MeBox extends React.Component<IMeBoxProps> {
                     <MessagesDropDown />
                     {withLabel && <div className={classes.label}>{t("Messages")}</div>}
                 </div>
-                <!--
-                {separator}
-                <div className={classes.meboxItem}>
-                    <UserDropdown />
-                    {withLabel && <div className={classes.label}>{t("Profile")}</div>}
-                </div>
-                -->
             </div>
         );
     }
