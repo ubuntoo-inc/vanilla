@@ -15,7 +15,7 @@
             ## Used for the background of modals, dropdowns, the page, and various containers.
             #bg: "#173042",
             ## Primary brand color
-            primary: "#2A8351",
+            primary: "#173042",
             ## Secondary brand color. Used for various accents.
             secondary: "#173042" (generated default),
         },
@@ -55,8 +55,8 @@
             ## Default sizes.
 
             size: {
-                large: 24,
-                medium: 18,
+                large: 17,
+                medium: 14,
                 # small: 12,
                 # largeTitle: 32,
                 title: 36,
@@ -114,15 +114,6 @@
             {
                  to: "/categories",
                  children: "Categories",
-            },
-            {
-                 to: "/home",
-                 children: "Categories",
-            },
-            {
-                 children: "Help",
-                 permission: "kb.view",
-                 to: "/kb",
             },
             ],
             ## Some other languages
@@ -321,7 +312,7 @@
 
             ## URL to a logo.
             desktop: {
-                url: "https://cdn.ubuntoo.com/ubuntoo-logo.png",
+                #url: "https://cdn.ubuntoo.com/ubuntoo-logo.png",
             },
 
             ## Some vertical padding around the logo.
