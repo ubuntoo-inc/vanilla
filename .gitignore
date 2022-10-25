@@ -4,6 +4,10 @@
 !/addons/themes/theme-dashboard/
 !/addons/themes/theme-boilerplate/
 !/addons/themes/keystone/
+!/addons/themes/theme-ubuntoo/
+!/addons/themes/theme-gfcr/
+!/addons/themes/theme-safe-seaweed/
+!/addons/themes/theme-iucn/
 /applications/*
 !/applications/conversations/
 !/applications/dashboard/
