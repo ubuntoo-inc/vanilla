@@ -92,12 +92,12 @@
         ## By default all are generated from the mainColors.
         links: {
             colors: {
-                default: "#2A8351",
+                default: "#173042",
                 ## By default all of these will be generated as an offset from the default.
-                hover: "#2A8351",
-                focus: "#2A8351",
-                keyboardFocus: "#2A8351",
-                active: "#2A8351",
+                hover: "#173042",
+                focus: "#173042",
+                keyboardFocus: "#173042",
+                active: "#173042",
             },
         },
     },
