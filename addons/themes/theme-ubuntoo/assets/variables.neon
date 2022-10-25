@@ -298,7 +298,7 @@
             ## "hidden" - TitleBar Logo is never visible.
             ## "fade-in" - TitleBar Logo take space, but is hidden, until theme header scrolls out of view.
 
-            # doubleLogoStrategy: "visible",
+            doubleLogoStrategy: "hidden",
 
             ## Offset to the right of the logo.
             # offsetRight: 16,
