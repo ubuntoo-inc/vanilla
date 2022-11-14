@@ -189,7 +189,7 @@ class UbuntooEmbedFactory extends AbstractEmbedFactory {
 
 
             $shortDesc = $content->shortBio;
-            $photoUrl = $content->bannerImageUrl;
+            $photoUrl = $content->companyImageUrl;
         } else {
             $content = $this->queryGraphQL($contentUrl, 'knowledgeByUrl', $knowledgeQuery);
             $shortDesc = $content->title;
