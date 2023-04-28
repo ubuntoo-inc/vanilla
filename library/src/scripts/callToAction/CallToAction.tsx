@@ -1,9 +1,9 @@
 /**
- * @copyright 2009-2021 Vanilla Forums Inc.
+ * @copyright 2009-2022 Vanilla Forums Inc.
  * @license GPL-2.0-only
  */
 
-import React, { useRef } from "react";
+import React, { useMemo, useRef } from "react";
 import LinkAsButton from "@library/routing/LinkAsButton";
 import { t } from "@vanilla/i18n";
 import Heading from "@library/layout/Heading";
@@ -15,6 +15,8 @@ import classNames from "classnames";
 import { ButtonTypes } from "../forms/buttonTypes";
 import { Widget } from "@library/layout/Widget";
 import { useSection } from "@library/layout/LayoutContext";
+import { createSourceSetValue, ImageSourceSet } from "@library/utility/appUtils";
+import { cx } from "@emotion/css";
 
 interface ICTALink {
     to: string;
@@ -28,9 +30,13 @@ interface IProps {
     title: string;
     otherCTAs?: ICTALink[];
     imageUrl?: string;
-    description?: string;
+    description?: string | React.ReactNode;
     desktopOnly?: boolean;
+    backgroundImage?: string;
+    backgroundImageSrcSet?: ImageSourceSet;
     options?: DeepPartial<ICallToActionOptions>;
+    className?: string;
+    customCTA?: React.ReactNode;
 }
 
 export function CallToAction(props: IProps) {
@@ -52,7 +58,7 @@ export function CallToAction(props: IProps) {
                     <LinkAsButton
                         buttonType={linkButtonType}
                         to={ctaLink.to}
-                        className={options.compactButtons ? ctaClasses.compactButton : undefined}
+                        className={cx(ctaClasses.button, { [ctaClasses.compactButton]: options.compactButtons })}
                     >
                         {t(ctaLink.textCTA)}
                     </LinkAsButton>
@@ -64,11 +70,30 @@ export function CallToAction(props: IProps) {
     const isFullWidth = useSection().isFullWidth;
     const showContent = props.desktopOnly && !isFullWidth ? false : true;
 
+    const backgroundFromOption = props.options?.box?.background;
+
+    const backgroundUrlSrcSet = useMemo(() => {
+        return backgroundFromOption?.imageSrcSet
+            ? { srcSet: createSourceSetValue(backgroundFromOption.imageSrcSet) }
+            : {};
+    }, [backgroundFromOption]);
+
+    const backgroundImageProps = {
+        src: backgroundFromOption?.image,
+        ...backgroundUrlSrcSet,
+    };
+
     return (
         <Widget>
             {showContent && (
-                <div className={ctaClasses.root}>
+                <div className={cx(ctaClasses.root, props.className)}>
                     <div className={ctaClasses.container}>
+                        {backgroundFromOption?.image && (
+                            <img className={ctaClasses.image} {...backgroundImageProps} role="presentation" />
+                        )}
+                        {backgroundFromOption?.image && props.options?.useOverlay && (
+                            <div className={cx(ctaClasses.absoluteFullParentSize, ctaClasses.backgroundOverlay)} />
+                        )}
                         {props.imageUrl && (
                             <div
                                 ref={imageItemRef}
@@ -81,7 +106,7 @@ export function CallToAction(props: IProps) {
                                     <img
                                         className={ctaClasses.image}
                                         src={props.imageUrl}
-                                        alt={props.title}
+                                        alt={t(props.title)}
                                         loading="lazy"
                                     />
                                 </div>
@@ -89,15 +114,25 @@ export function CallToAction(props: IProps) {
                         )}
                         <div className={ctaClasses.content}>
                             <Heading renderAsDepth={3} className={ctaClasses.title}>
-                                {props.title}
+                                {t(props.title)}
                             </Heading>
-
-                            {props.description && <div className={ctaClasses.description}>{props.description}</div>}
-                            {!multipleLinks && (
-                                <LinkAsButton buttonType={options.linkButtonType} to={props.to}>
-                                    {t(props.textCTA)}
-                                </LinkAsButton>
+                            {props.description && (
+                                <div className={ctaClasses.description}>
+                                    {typeof props.description === "string" ? t(props.description) : props.description}
+                                </div>
                             )}
+                            {!multipleLinks &&
+                                (props.customCTA ? (
+                                    props.customCTA
+                                ) : (
+                                    <LinkAsButton
+                                        buttonType={options.linkButtonType}
+                                        to={props.to}
+                                        className={ctaClasses.button}
+                                    >
+                                        {t(props.textCTA ?? "")}
+                                    </LinkAsButton>
+                                ))}
                             {multipleLinks && <div className={ctaClasses.linksWrapper}>{multipleLinks}</div>}
                         </div>
                     </div>

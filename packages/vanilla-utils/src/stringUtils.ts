@@ -273,3 +273,30 @@ function mergeCustomizer(into: any, source: any) {
 export function mergeAndReplaceArrays(item1: Record<any, any>, item2: Record<any, any>) {
     return mergeWith({}, item1, item2, mergeCustomizer);
 }
+
+export function isNumeric(value: any) {
+    if (typeof value === "number") {
+        return true;
+    }
+    if (typeof value === "string") {
+        return /^[+-]?([0-9]*[.])?[0-9]+$/.test(value);
+    }
+    return false;
+}
+
+/**
+ * Test if a given string matches a ruleset which could contain a wildcard selector (*)
+ *
+ * Example: Given string "vanillaforums" should match rule set "vanilla*"
+ */
+export function matchWithWildcard(target: string, matchers: string): boolean | null {
+    const escapeForRegex = (string: string) => string.replace(/([.*+?^=!:${}()|[\]/\\])/g, "\\$1");
+
+    if (!matchers || !target) {
+        return null;
+    }
+
+    return matchers.split("\n").some((match) => {
+        return new RegExp("^" + match.replace(/\//gi, "").split("*").map(escapeForRegex).join(".*") + "$").test(target);
+    });
+}

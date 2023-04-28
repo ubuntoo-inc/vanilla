@@ -6,7 +6,7 @@
  */
 
 import gdn from "@library/gdn";
-import { PromiseOrNormalCallback } from "@vanilla/utils";
+import { logError, PromiseOrNormalCallback, RecordID } from "@vanilla/utils";
 import { ensureScript } from "@vanilla/dom-utils";
 import { sprintf } from "sprintf-js";
 
@@ -91,6 +91,14 @@ export function isURL(url: string): boolean {
  */
 export function isAllowedUrl(input: string): boolean {
     return isURL(input);
+}
+
+/**
+ * Normalize the URL with a prepended http if there isn't one.
+ */
+export function normalizeUrl(urlToNormalize: string) {
+    const result = urlToNormalize.match(/^https?:\/\//) ? urlToNormalize : "http://" + urlToNormalize;
+    return result;
 }
 
 export interface ISiteSection {
@@ -227,7 +235,13 @@ export function onReady(callback: PromiseOrNormalCallback) {
  */
 export function _executeReady(before?: () => void | Promise<void>): Promise<any[]> {
     return new Promise((resolve) => {
-        const handlerPromises = _readyHandlers.map((handler) => handler());
+        const handlerPromises = _readyHandlers.map((handler) => {
+            let result = handler();
+            if (result instanceof Promise) {
+                result.catch((err) => logError(err));
+            }
+            return result;
+        });
         const exec = () => {
             before?.();
             return Promise.all(handlerPromises).then(resolve);
@@ -261,26 +275,38 @@ export function removeOnContent(callback: (event: CustomEvent) => void) {
 }
 
 /**
+ * Encode a username the same way our backend does.
+ *
+ * Notably there is a long-standing issue where names certain characters that our dispatcher matches on need to be double encoded.
+ * @param username
+ */
+function encodeUserName(username?: string): string {
+    // Matching existing backend logic.
+    const specialEncoded = username?.replace("/", "%2f").replace("&", "%26") ?? "";
+    return encodeURIComponent(specialEncoded);
+}
+
+/**
  * Make a URL to a user's profile.
  */
-export function makeProfileUrl(username: string) {
-    const userPath = `/profile/${encodeURIComponent(username)}`;
+export function makeProfileUrl(username?: string) {
+    const userPath = `/profile/${encodeUserName(username)}`;
     return formatUrl(userPath, true);
 }
 
 /**
  * Make a URL to a user's discussions.
  */
-export function makeProfileDiscussionsUrl(username: string) {
-    const discussionsPath = `/profile/discussions/${encodeURIComponent(username)}`;
+export function makeProfileDiscussionsUrl(username?: string) {
+    const discussionsPath = `/profile/discussions/${encodeUserName(username)}`;
     return formatUrl(discussionsPath, true);
 }
 
 /**
  * Make a URL to a user's comments.
  */
-export function makeProfileCommentsUrl(username: string) {
-    const commentsPath = `/profile/comments/${encodeURIComponent(username)}`;
+export function makeProfileCommentsUrl(username?: string) {
+    const commentsPath = `/profile/comments/${encodeUserName(username)}`;
     return formatUrl(commentsPath, true);
 }
 
@@ -308,4 +334,20 @@ export async function ensureReCaptcha(): Promise<IRecaptcha | null> {
  */
 export function accessibleLabel(template: string, variable: string[]) {
     return sprintf(template, variable);
+}
+
+export type ImageSourceSet = Record<RecordID, string>;
+
+/**
+ * This function creates a source set value from an object where the key indicates the
+ * the width and the corresponding values are the image URL.
+ */
+export function createSourceSetValue(sourceSet: ImageSourceSet): string {
+    return (
+        Object.entries(sourceSet ?? {})
+            // Filter out any values which are empty
+            .filter(([_, value]) => value)
+            .map((source) => `${source.reverse().join(" ")}w`)
+            .join(",")
+    );
 }

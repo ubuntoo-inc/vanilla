@@ -1,19 +1,18 @@
 /**
- * @copyright 2009-2019 Vanilla Forums Inc.
+ * @copyright 2009-2023 Vanilla Forums Inc.
  * @license GPL-2.0-only
  */
 
 import React from "react";
-import { ITokenProps } from "@library/forms/select/Tokens";
 import { useRoles, useRoleSelectOptions } from "@dashboard/roles/roleHooks";
 import { LoadStatus } from "@library/@types/api/core";
 import { notEmpty } from "@vanilla/utils";
-import { LazyTokens } from "@library/forms/select/LazyTokens";
+import { Tokens } from "@library/forms/select/Tokens";
+import { t } from "@vanilla/i18n";
 
-interface IProps extends Omit<ITokenProps, "options" | "isLoading" | "value" | "onChange"> {
+interface IProps extends Omit<React.ComponentProps<typeof Tokens>, "options" | "isLoading" | "value" | "onChange"> {
     value: number[];
-    onChange: (tokens: number[]) => void;
-    menuPlacement?: string;
+    onChange: (roleIDs: number[]) => void;
 }
 
 export function MultiRoleInput(props: IProps) {
@@ -21,8 +20,9 @@ export function MultiRoleInput(props: IProps) {
     const roleOptions = useRoleSelectOptions();
 
     return (
-        <LazyTokens
+        <Tokens
             {...props}
+            placeholder={t("Select...")}
             value={props.value
                 .map((roleID) => {
                     const role = rolesByID.data?.[roleID];

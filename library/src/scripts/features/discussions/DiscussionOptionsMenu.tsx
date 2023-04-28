@@ -6,11 +6,11 @@
 
 import React, { FunctionComponent } from "react";
 import { IDiscussion } from "@dashboard/@types/api/discussion";
-import DropDown, { FlyoutType } from "@library/flyouts/DropDown";
+import DropDown, { DropDownOpenDirection, FlyoutType } from "@library/flyouts/DropDown";
 import { getMeta, t } from "@library/utility/appUtils";
 import DropDownItemLink from "@library/flyouts/items/DropDownItemLink";
 import { useUserCanEditDiscussion } from "@library/features/discussions/discussionHooks";
-import { hasPermission, IPermission, IPermissionOptions, PermissionMode } from "@library/features/users/Permission";
+import { IPermission, IPermissionOptions, PermissionMode } from "@library/features/users/Permission";
 import DiscussionOptionsAnnounce from "@library/features/discussions/DiscussionOptionsAnnounce";
 import DiscussionOptionsMove from "@library/features/discussions/DiscussionOptionsMove";
 import DiscussionOptionsDelete from "@library/features/discussions/DiscussionOptionsDelete";
@@ -22,6 +22,9 @@ import { DiscussionOptionsChangeLog } from "@library/features/discussions/Discus
 import DiscussionChangeType from "@library/features/discussions/DiscussionOptionsChangeType";
 import { NON_CHANGE_TYPE } from "@library/features/discussions/forms/ChangeTypeDiscussionForm";
 import { DiscussionOptionsTag } from "@library/features/discussions/DiscussionOptionsTag";
+import { CollectionsOptionButton } from "@library/featuredCollections/CollectionsOptionButton";
+import { CollectionRecordTypes } from "@library/featuredCollections/Collections.variables";
+import { usePermissionsContext } from "@library/features/users/PermissionsContext";
 
 interface IDiscussionOptionItem {
     permission?: IPermission;
@@ -36,6 +39,7 @@ export function addDiscussionOption(option: IDiscussionOptionItem) {
 }
 
 const DiscussionOptionsMenu: FunctionComponent<{ discussion: IDiscussion }> = ({ discussion }) => {
+    const { hasPermission } = usePermissionsContext();
     const canEdit = useUserCanEditDiscussion(discussion);
     const permOptions: IPermissionOptions = {
         resourceType: "category",
@@ -63,6 +67,8 @@ const DiscussionOptionsMenu: FunctionComponent<{ discussion: IDiscussion }> = ({
 
     const canChangeType = filteredDiscussionTypes.length > 1 && canEdit;
 
+    const canAddToCollection = hasPermission("community.manage", permOptions);
+
     if (canEdit) {
         items.push(
             <DropDownItemLink to={`/post/editdiscussion/${discussion.discussionID}`}>{t("Edit")}</DropDownItemLink>,
@@ -76,11 +82,20 @@ const DiscussionOptionsMenu: FunctionComponent<{ discussion: IDiscussion }> = ({
         items.push(<DiscussionOptionsDelete discussion={discussion} />);
     }
 
-    if (canModerate || canMove || canClose || canChangeType) {
+    if (canModerate || canMove || canClose || canChangeType || canAddToCollection) {
         items.push(<DropDownItemSeparator />);
 
-        if (canModerate) {
+        if (canModerate || canAddToCollection) {
             items.push(<DiscussionOptionsAnnounce discussion={discussion} />);
+            if (canAddToCollection) {
+                items.push(
+                    <CollectionsOptionButton
+                        recordID={discussion.discussionID}
+                        recordType={CollectionRecordTypes.DISCUSSION}
+                        record={discussion}
+                    />,
+                );
+            }
             items.push(<DiscussionOptionsSink discussion={discussion} />);
         }
 
@@ -123,7 +138,7 @@ const DiscussionOptionsMenu: FunctionComponent<{ discussion: IDiscussion }> = ({
     }
 
     return (
-        <DropDown name={t("Discussion Options")} flyoutType={FlyoutType.LIST}>
+        <DropDown name={t("Discussion Options")} flyoutType={FlyoutType.LIST} asReachPopover>
             {items.map((item, i) => {
                 return <React.Fragment key={i}>{item}</React.Fragment>;
             })}

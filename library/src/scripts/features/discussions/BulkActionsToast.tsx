@@ -1,6 +1,6 @@
 /**
  * @author Maneesh Chiba <maneesh.chiba@vanillaforums.com>
- * @copyright 2009-2021 Vanilla Forums Inc.
+ * @copyright 2009-2022 Vanilla Forums Inc.
  * @license Proprietary
  */
 
@@ -9,7 +9,8 @@ import Translate from "@library/content/Translate";
 import { IGetDiscussionByID } from "@library/features/discussions/DiscussionActions";
 import { useDiscussionByIDs } from "@library/features/discussions/discussionHooks";
 import { discussionListClasses } from "@library/features/discussions/DiscussionList.classes";
-import { hasPermission, PermissionMode } from "@library/features/users/Permission";
+import { PermissionMode } from "@library/features/users/Permission";
+import { usePermissionsContext } from "@library/features/users/PermissionsContext";
 import Button from "@library/forms/Button";
 import { ButtonTypes } from "@library/forms/buttonTypes";
 import ConditionalWrap from "@library/layout/ConditionalWrap";
@@ -29,6 +30,8 @@ interface IProps {
     handleBulkMove(): void;
     /** Function to merge all selected discussions */
     handleBulkMerge(): void;
+    /** Function to close all selected discussions */
+    handleBulkClose(): void;
 }
 
 /**
@@ -37,7 +40,8 @@ interface IProps {
  * It will also render a modal for synchronous bulk actions
  */
 export function BulkActionsToast(props: IProps) {
-    const { selectedIDs, handleSelectionClear, handleBulkDelete, handleBulkMove, handleBulkMerge } = props;
+    const { selectedIDs, handleSelectionClear, handleBulkDelete, handleBulkMove, handleBulkMerge, handleBulkClose } =
+        props;
     const classes = discussionListClasses();
 
     const sanitizedIDs = useMemo(() => {
@@ -47,6 +51,8 @@ export function BulkActionsToast(props: IProps) {
     const countSelectedDiscussions = sanitizedIDs.length;
 
     const discussions = useDiscussionByIDs(sanitizedIDs ?? []);
+
+    const { hasPermission } = usePermissionsContext();
 
     /**
      * Check one permission against a list of discussions
@@ -70,6 +76,15 @@ export function BulkActionsToast(props: IProps) {
         }
         return [];
     };
+
+    // If all of the selected discussions are already closed, disable the close button
+    const isAllClosed = useMemo<boolean>(() => {
+        if (discussions) {
+            const notClosed = Object.values(discussions).filter(({ closed }) => !closed);
+            return notClosed.length === 0;
+        }
+        return false;
+    }, [discussions]);
 
     // Create a list of all the discussions which we do not have permission to operate on.
     // If the list is empty, we have the required permissions.
@@ -126,6 +141,26 @@ export function BulkActionsToast(props: IProps) {
                             disabled={uneditableDiscussions.length > 0 || countSelectedDiscussions < 2}
                         >
                             {t("Merge")}
+                        </Button>
+                    </span>
+                </ConditionalWrap>
+                <ConditionalWrap
+                    condition={uneditableDiscussions.length > 0}
+                    component={ToolTip}
+                    componentProps={{
+                        label: `${t(
+                            "You don't have the close permission on the following discussions:",
+                        )} ${uneditableDiscussions.join(", ")}`,
+                    }}
+                >
+                    {/* This span is required for the conditional tooltip */}
+                    <span>
+                        <Button
+                            onClick={handleBulkClose}
+                            buttonType={ButtonTypes.TEXT}
+                            disabled={uneditableDiscussions.length > 0 || isAllClosed}
+                        >
+                            {t("Close")}
                         </Button>
                     </span>
                 </ConditionalWrap>

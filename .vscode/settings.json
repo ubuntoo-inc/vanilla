@@ -9,9 +9,8 @@
         "cloud/applications": true,
         "cloud/themes": true,
         ".idea": true,
-        "cgi-bin": true,
         "dist": true,
-        "**/node_modules": true,
+        "**/node_modules": false,
         "**/bower_components": true,
         "**/.phpunit.result.cache": true,
         ".htaccess.dist": true
@@ -22,11 +21,11 @@
         "**/.hg": true,
         "**/CVS": true,
         "**/.DS_Store": true,
+        "**/.yarn": true,
         "cloud/plugins": true,
         "cloud/applications": true,
         "cloud/themes": true,
         ".idea": true,
-        "cgi-bin": true,
         "**/bower_components": true,
         "vendor": true,
         "**/.phpunit.result.cache": true,
@@ -36,13 +35,13 @@
         "yarn.lock": true,
         "composer.lock": true,
         "**/node_modules": true,
-        "dist": true
+        "dist": true,
+        "coverage": true
     },
     "[json]": {
         "editor.defaultFormatter": "esbenp.prettier-vscode"
     },
     "[yaml]": {
-        "editor.formatOnSave": false,
         "editor.defaultFormatter": "esbenp.prettier-vscode"
     },
     "[html]": {
@@ -72,6 +71,9 @@
     },
     "emmet.excludeLanguages": ["ts", "tsx", "js", "jsx"],
     "editor.wordWrapColumn": 120,
+    "typescript.preferences.autoImportFileExcludePatterns": [
+        "jquery*"
+    ],
 
     // Inteliphense instead.
     "php.suggest.basic": false,

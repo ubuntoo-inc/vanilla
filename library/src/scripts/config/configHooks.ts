@@ -4,21 +4,25 @@
  * @license gpl-2.0-only
  */
 
-import { LoadStatus } from "@library/@types/api/core";
+import { ILoadable, Loadable, LoadStatus } from "@library/@types/api/core";
 import { ICoreStoreState } from "@library/redux/reducerRegistry";
 import { stableObjectHash } from "@vanilla/utils";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useDebugValue, useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import * as ConfigActions from "@library/config/configActions";
 import { bindActionCreators } from "@reduxjs/toolkit";
 import { useUniqueID } from "@library/utility/idUtils";
 import { IComboBoxOption } from "@library/features/search/ISearchBarProps";
 import { IAddon, ILocale } from "@dashboard/languages/LanguageSettingsTypes";
+import { useConfigDispatch } from "@library/config/configReducer";
+import { patchConfigThunk } from "@library/config/configActions";
+import { useToast } from "@library/features/toaster/ToastContext";
+import { t } from "@vanilla/i18n";
 
 const LOCALE_KEY = "garden.locale";
 
 export function useConfigActions() {
-    const dispatch = useDispatch();
+    const dispatch = useConfigDispatch();
     return useMemo(() => {
         return bindActionCreators(ConfigActions, dispatch);
     }, [dispatch]);
@@ -27,17 +31,24 @@ export function useConfigActions() {
 export function useConfigsByKeys(keys: string[]) {
     const hash = stableObjectHash(keys);
     const existing = useSelector((state: ICoreStoreState) => {
+        if (keys.length === 0) {
+            return {
+                status: LoadStatus.SUCCESS,
+                data: {},
+            } as Loadable<{}>;
+        }
         return (
-            state.config.configsByLookupKey[hash] ?? {
+            state.config.configsByLookupKey[hash] ??
+            ({
                 status: LoadStatus.PENDING,
-            }
+            } as Loadable<{}>)
         );
     });
 
     const actions = useConfigActions();
 
     useEffect(() => {
-        if (existing.status === LoadStatus.PENDING) {
+        if (existing.status === LoadStatus.PENDING && keys.length > 0) {
             actions.getConfigsByKeyThunk(keys);
         }
     }, [hash, existing.status]);
@@ -49,6 +60,8 @@ type ConfigValues = Record<string, any>;
 export function useConfigPatcher<T extends ConfigValues = ConfigValues>() {
     const watchID = useUniqueID("configPatch");
 
+    const toast = useToast();
+
     const existing = useSelector((state: ICoreStoreState) => {
         return (
             state.config.configPatchesByID[watchID] ?? {
@@ -59,20 +72,26 @@ export function useConfigPatcher<T extends ConfigValues = ConfigValues>() {
 
     const errorByID = useSelector((state: ICoreStoreState) => state.config.configPatchesByID[watchID]);
 
-    const actions = useConfigActions();
+    const dispatch = useConfigDispatch();
 
     const patchConfig = useCallback(
         async (values: T) => {
-            return actions.patchConfigThunk({ values, watchID });
+            const result = await dispatch(patchConfigThunk({ values, watchID }));
+            if (result.meta.requestStatus === "fulfilled") {
+                toast.addToast({ body: t("Configuration changes saved."), autoDismiss: true, dismissible: true });
+            }
+            return result;
         },
         [watchID],
     );
 
-    return {
+    const result = {
         patchConfig,
         isLoading: existing.status === LoadStatus.LOADING,
         error: existing.status === LoadStatus.ERROR ? errorByID.error : null,
     };
+    useDebugValue(result);
+    return result;
 }
 
 const useKnowledgeEnabled = () => {

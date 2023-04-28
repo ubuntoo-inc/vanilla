@@ -85,3 +85,59 @@ describe("isUrl", () => {
         });
     }
 });
+
+describe("makeProfileUrl", () => {
+    beforeEach(() => {
+        application.setMeta("context.basePath", "/test");
+    });
+    it("can make a simple url", () => {
+        expect(application.makeProfileUrl("hello")).toBe("http://localhost/test/profile/hello");
+    });
+
+    it("can encoded various url characters", () => {
+        expect(application.makeProfileUrl("hello-$%^^*()")).toBe("http://localhost/test/profile/hello-%24%25%5E%5E*()");
+    });
+
+    it("can has special encoding for / and & characters", () => {
+        // These are double encoded for compatibility with quirks in our backed router.
+        // The backend also encodes these characters this way in user urls (see \userUrl() and UserModel::getProfileUrl())
+        expect(application.makeProfileUrl("he&llo/user")).toBe("http://localhost/test/profile/he%2526llo%252fuser");
+    });
+});
+
+describe("createSourceSetValue", () => {
+    it("generates a source string", () => {
+        const mock = {
+            100: "test-100",
+            200: "test-200",
+        };
+        const expected = "test-100 100w,test-200 200w";
+        const actual = application.createSourceSetValue(mock);
+        expect(actual).toEqual(expected);
+    });
+    it("omits empty values source string", () => {
+        const mock = {
+            100: "test-100",
+            200: "",
+            300: "test-300",
+        };
+        const expected = "test-100 100w,test-300 300w";
+        const actual = application.createSourceSetValue(mock);
+        expect(actual).toEqual(expected);
+    });
+    it("returns empty source string for an object with empty values", () => {
+        const mock = {
+            100: "",
+            200: "",
+        };
+        const expected = "";
+        const actual = application.createSourceSetValue(mock);
+        expect(actual).toEqual(expected);
+    });
+    it("returns empty source string for an empty object", () => {
+        const mock = {};
+        const expected = "";
+        const actual = application.createSourceSetValue(mock);
+        expect(actual).toEqual(expected);
+    });
+});

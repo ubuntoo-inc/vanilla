@@ -1,20 +1,28 @@
 import { DEFAULT_CORE_SEARCH_FORM, INITIAL_SEARCH_STATE } from "@library/search/searchReducer";
-import { ISearchForm, ISearchResults, ISearchFormBase } from "@library/search/searchTypes";
+import { ISearchForm, ISearchResponse } from "@library/search/searchTypes";
 import { ILoadable } from "@library/@types/api/core";
 import React, { useContext } from "react";
 import { ISearchDomain } from "./SearchService";
+import { JsonSchema } from "@vanilla/json-schema-forms";
 
 export const SearchContext = React.createContext<ISearchContextValue>({
     getFilterComponentsForDomain: () => null,
     updateForm: () => {},
     resetForm: () => {},
     results: INITIAL_SEARCH_STATE.results,
-    domainSearchResults: INITIAL_SEARCH_STATE.domainSearchResults,
+    domainSearchResponse: INITIAL_SEARCH_STATE.domainSearchResponse,
     form: DEFAULT_CORE_SEARCH_FORM,
-    search: () => {},
+    search: async () => {},
     searchInDomain: () => {},
     getDomains: () => {
         return [];
+    },
+    getFiltersSchemaForDomain: function (_domainKey): JsonSchema {
+        return {
+            type: "object",
+            properties: {},
+            required: [],
+        };
     },
     getCurrentDomain: () => {
         throw new Error("Context implementation is required for this method");
@@ -23,10 +31,10 @@ export const SearchContext = React.createContext<ISearchContextValue>({
         return DEFAULT_CORE_SEARCH_FORM;
     },
 });
-interface ISearchContextValue<ExtraFormValues extends object = ISearchFormBase> {
-    results: ILoadable<ISearchResults>;
+interface ISearchContextValue<ExtraFormValues extends object = {}> {
+    results: ILoadable<ISearchResponse>;
 
-    domainSearchResults: Record<string, ILoadable<ISearchResults>>;
+    domainSearchResponse: Record<string, ILoadable<ISearchResponse>>;
 
     form: ISearchForm<ExtraFormValues>;
 
@@ -49,7 +57,7 @@ interface ISearchContextValue<ExtraFormValues extends object = ISearchFormBase> 
     /**
      * Perform a search.
      */
-    search(): void;
+    search(): Promise<void>;
 
     /**
      * Perform a separate search in any domain outside of the current domain
@@ -65,6 +73,12 @@ interface ISearchContextValue<ExtraFormValues extends object = ISearchFormBase> 
      * Get the current search domain of the form.
      */
     getCurrentDomain(): ISearchDomain;
+
+    /**
+     * Get the filter schema for the current domain.
+     * Only the Members domain makes use of this currently.
+     */
+    getFiltersSchemaForDomain(domainKey: ISearchDomain["key"]): JsonSchema;
 
     /**
      * Get the default values for the form.

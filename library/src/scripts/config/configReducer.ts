@@ -5,7 +5,7 @@
  */
 
 import { IAddon, ITranslationService } from "@dashboard/languages/LanguageSettingsTypes";
-import { Loadable, LoadStatus } from "@library/@types/api/core";
+import { IApiError, IFieldError, IServerError, Loadable, LoadStatus } from "@library/@types/api/core";
 import {
     getConfigsByKeyThunk,
     patchConfigThunk,
@@ -15,12 +15,14 @@ import {
     patchAddonByIdThunk,
     getAvailableLocalesThunk,
     getServicesByLocaleThunk,
+    updateConfigsLocal,
 } from "@library/config/configActions";
-import { createSlice } from "@reduxjs/toolkit";
-import { stableObjectHash } from "@vanilla/utils";
-import { meta } from "eslint/lib/rules/*";
+import { configureStore, createSlice } from "@reduxjs/toolkit";
+import { indexArrayByKey, notEmpty, stableObjectHash } from "@vanilla/utils";
+import { useDispatch } from "react-redux";
 
 type ConfigValuesByKey = Record<string, any>;
+
 type ServiceValuesByKey = Record<string, any>;
 export interface IConfigState {
     configsByLookupKey: Record<number, Loadable<ConfigValuesByKey>>;
@@ -110,9 +112,30 @@ export const configSlice = createSlice({
                 }
             })
             .addCase(patchConfigThunk.rejected, (state, action) => {
+                // Our error handling is particularly complicated here because we are using a flat form for "not-flat" values
+                // This endpoint is pretty special in using dots in the way it does here.
+                // Specifically the dots in these paths behave differently for our configs because configs are dealt with as a flat list, rather than using dots to refer to a nested property.
+                const error = (action.payload ?? action.error) as IServerError;
+                if (typeof error.errors === "object" && error !== null) {
+                    const newFieldErrors: IFieldError[] = Object.values(error.errors)
+                        .flat()
+                        .map((fieldError) => {
+                            return {
+                                ...fieldError,
+                                field: [fieldError.path, fieldError.field].filter(notEmpty).join("."),
+                                path: undefined,
+                            };
+                        });
+
+                    error.errors = indexArrayByKey(newFieldErrors, "field");
+                }
+
                 state.configPatchesByID[action.meta.arg.watchID] = {
                     status: LoadStatus.ERROR,
-                    error: action.error,
+                    error: {
+                        ...action.error,
+                        ...(action.payload as any), // Kludge because our redux toolkit error handling is infuriating.
+                    },
                 };
             })
             // Machine Translation
@@ -156,6 +179,21 @@ export const configSlice = createSlice({
                     status: LoadStatus.ERROR,
                     error: action.error,
                 };
+            })
+            .addCase(updateConfigsLocal, (state, action) => {
+                for (const [key, value] of Object.entries(action.payload)) {
+                    Object.values(state.configsByLookupKey).forEach((config) => {
+                        if (!config.data) {
+                            return;
+                        }
+
+                        if (!(key in config.data)) {
+                            return;
+                        }
+
+                        config.data[key] = value;
+                    });
+                }
             })
             .addCase(getAddonsByTypeThunk.pending, (state, action) => {
                 state.addons[action.meta.arg.values] = {
@@ -239,3 +277,7 @@ export const configSlice = createSlice({
             });
     },
 });
+
+const store = configureStore({ reducer: { [configSlice.name]: configSlice.reducer } });
+export type ConfigDispatch = typeof store.dispatch;
+export const useConfigDispatch = () => useDispatch<typeof store.dispatch>();

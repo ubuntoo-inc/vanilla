@@ -1,4 +1,4 @@
-import { css, cx } from "@emotion/css";
+import { css, CSSObject, cx } from "@emotion/css";
 import { titleBarVariables } from "@library/headers/TitleBar.variables";
 import { oneColumnVariables } from "@library/layout/Section.variables";
 import { globalVariables } from "@library/styles/globalStyleVars";
@@ -7,36 +7,53 @@ import { sticky } from "@library/styles/styleHelpersPositioning";
 import { useThemeCache } from "@library/styles/styleUtils";
 import { Variables } from "@library/styles/Variables";
 import { calc } from "csx";
+import { CSSProperties } from "react";
 
-export const adminTitleBarClasses = useThemeCache(() => {
+export const adminTitleBarClasses = useThemeCache((props?: { zIndex: CSSProperties["zIndex"] }) => {
+    const { zIndex } = props ?? {};
     const panelLayoutVars = oneColumnVariables();
     const mediaQueries = titleBarVariables().mediaQueries();
 
     const root = css({
         background: "#fbfcff",
         borderBottom: "1px solid #dddee0",
+        position: "sticky",
+        top: titleBarVariables().fullHeight,
+        zIndex: zIndex ?? 1,
     });
 
-    const container = css(
-        {
-            display: "flex",
-            flexDirection: "column",
-            ...Mixins.margin(
-                Variables.spacing({
-                    vertical: 12,
-                    left: 28,
-                    right: calc(
-                        `(100vw - ${panelLayoutVars.contentWidth + panelLayoutVars.gutter.full}px)/2 + ${
-                            panelLayoutVars.gutter.full
-                        }px`,
-                    ),
-                }),
-            ),
-        },
+    const container = useThemeCache((useTwoColumnContainer?: boolean, compact?: boolean) => {
+        const gutterSize = compact ? 18 : 28;
+        return css(
+            {
+                display: "flex",
+                flexDirection: "column",
+                margin: 0,
+                ...Mixins.padding(
+                    Variables.spacing({
+                        vertical: 12,
+                        left: gutterSize,
+                        right: useTwoColumnContainer
+                            ? calc(
+                                  `(100vw - ${panelLayoutVars.contentWidth + panelLayoutVars.gutter.full}px)/2 + ${
+                                      panelLayoutVars.gutter.full
+                                  }px`,
+                              )
+                            : gutterSize,
+                    }),
+                ),
+            },
 
-        mediaQueries.customBreakPoint({ marginRight: panelLayoutVars.gutter.full }, panelLayoutVars.contentWidth),
-        mediaQueries.compact({ marginRight: panelLayoutVars.gutter.size, marginLeft: panelLayoutVars.gutter.size }),
-    );
+            mediaQueries.customBreakPoint(
+                { paddingRight: useTwoColumnContainer ? panelLayoutVars.gutter.full : gutterSize },
+                panelLayoutVars.contentWidth,
+            ),
+            mediaQueries.compact({
+                paddingRight: panelLayoutVars.gutter.size,
+                paddingLeft: panelLayoutVars.gutter.size,
+            }),
+        );
+    });
 
     const titleAndActionsContainer = css({
         display: "flex",
@@ -106,10 +123,11 @@ export const adminEditTitleBarClasses = useThemeCache(() => {
         zIndex: 3,
         boxShadow: "0 2px 4px rgba(0,0,0,0.2)",
         marginBottom: 1,
+        background: "#fff",
     });
 
     const editingContainer = cx(
-        adminTitleBarClasses().container,
+        adminTitleBarClasses().container(true),
         css({
             background: "#fff",
         }),

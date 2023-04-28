@@ -8,6 +8,7 @@
 namespace VanillaTests;
 
 use Garden\Container\Container;
+use Vanilla\Models\AddonModel;
 
 /**
  * A base class for tests that require Vanilla to be installed.
@@ -22,13 +23,15 @@ use Garden\Container\Container;
  * 4. You can include other test traits and they should set up and tear down automatically.
  *
  */
-class SiteTestCase extends VanillaTestCase {
+class SiteTestCase extends VanillaTestCase
+{
     use SiteTestTrait, SetupTraitsTrait;
 
     /**
      * @inheritDoc
      */
-    public static function setUpBeforeClass(): void {
+    public static function setUpBeforeClass(): void
+    {
         parent::setUpBeforeClass();
         static::setUpBeforeClassTestTraits();
     }
@@ -36,7 +39,8 @@ class SiteTestCase extends VanillaTestCase {
     /**
      * @inheritDoc
      */
-    public function setUp(): void {
+    public function setUp(): void
+    {
         parent::setUp();
         $this->setUpTestTraits();
     }
@@ -44,7 +48,8 @@ class SiteTestCase extends VanillaTestCase {
     /**
      * @inheritDoc
      */
-    public function tearDown(): void {
+    public function tearDown(): void
+    {
         parent::tearDown();
         $this->tearDownTestTraits();
     }
@@ -52,8 +57,37 @@ class SiteTestCase extends VanillaTestCase {
     /**
      * @inheritDoc
      */
-    public static function tearDownAfterClass(): void {
+    public static function tearDownAfterClass(): void
+    {
         parent::tearDownAfterClass();
         static::tearDownAfterClassTestTraits();
+    }
+
+    /**
+     * Enable an addon on the site.
+     *
+     * @param string $key
+     */
+    public function enableAddon(string $key)
+    {
+        $addonModel = \Gdn::getContainer()->get(AddonModel::class);
+        $addonManager = $addonModel->getAddonManager();
+
+        $addon = $addonManager->lookupAddon($key);
+        $addonModel->enable($addon);
+    }
+
+    /**
+     * Disable an addon on the site.
+     *
+     * @param string $key
+     */
+    public function disableAddon(string $key)
+    {
+        $addonModel = \Gdn::getContainer()->get(AddonModel::class);
+        $addonManager = $addonModel->getAddonManager();
+
+        $addon = $addonManager->lookupAddon($key);
+        $addonModel->disable($addon);
     }
 }

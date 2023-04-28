@@ -9,7 +9,7 @@ import { ButtonTypes } from "@library/forms/buttonTypes";
 import Frame from "@library/layout/frame/Frame";
 import FrameHeader from "@library/layout/frame/FrameHeader";
 import FrameBody from "@library/layout/frame/FrameBody";
-import LazyModal from "@library/modal/LazyModal";
+import Modal from "@library/modal/Modal";
 import ModalSizes from "@library/modal/ModalSizes";
 import { t } from "@vanilla/i18n";
 import { IComboBoxOption } from "@library/features/search/SearchBar";
@@ -17,9 +17,10 @@ import MultiUserInput from "@library/features/users/MultiUserInput";
 import InputTextBlock, { InputTextBlockBaseClass } from "@library/forms/InputTextBlock";
 import Checkbox from "@library/forms/Checkbox";
 import { userCardClasses } from "@library/features/users/ui/inviteUserCardStyles";
-import Permission, { hasPermission, PermissionMode } from "@library/features/users/Permission";
+import Permission, { PermissionMode } from "@library/features/users/Permission";
 import { IApiError } from "@library/@types/api/core";
 import ErrorMessages from "@library/forms/ErrorMessages";
+import { usePermissionsContext } from "@library/features/users/PermissionsContext";
 
 interface IProps {
     defaultUsers: IComboBoxOption[];
@@ -44,13 +45,15 @@ export default function InviteUserCard(props: IProps) {
         errors,
     } = props;
 
+    const { hasPermission } = usePermissionsContext();
+
     const hasEmailInvitePermission = hasPermission("emailInvitations.add");
     const [boxChecked, setBoxChecked] = useState(false);
 
     const classes = userCardClasses();
 
     return (
-        <LazyModal
+        <Modal
             isVisible={visible}
             size={ModalSizes.MEDIUM}
             exitHandler={() => {
@@ -145,6 +148,6 @@ export default function InviteUserCard(props: IProps) {
                     </FrameBody>
                 }
             />
-        </LazyModal>
+        </Modal>
     );
 }

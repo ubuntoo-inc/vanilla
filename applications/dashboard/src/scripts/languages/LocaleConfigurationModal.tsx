@@ -7,7 +7,6 @@
 import { DashboardFormControl, DashboardFormControlGroup } from "@dashboard/forms/DashboardFormControl";
 import { languageSettingsStyles } from "@dashboard/languages/LanguageSettings.styles";
 import { IAddon, ITranslationService } from "@dashboard/languages/LanguageSettingsTypes";
-import { cx } from "@emotion/css";
 import { useLocaleConfig } from "@library/config/configHooks";
 import Button from "@library/forms/Button";
 import { ButtonTypes } from "@library/forms/buttonTypes";
@@ -17,7 +16,7 @@ import { frameBodyClasses } from "@library/layout/frame/frameBodyStyles";
 import FrameFooter from "@library/layout/frame/FrameFooter";
 import { frameFooterClasses } from "@library/layout/frame/frameFooterStyles";
 import FrameHeader from "@library/layout/frame/FrameHeader";
-import LazyModal from "@library/modal/LazyModal";
+import Modal from "@library/modal/Modal";
 import ModalSizes from "@library/modal/ModalSizes";
 import { useUniqueID } from "@library/utility/idUtils";
 import { t } from "@vanilla/i18n";
@@ -105,7 +104,7 @@ export const LocaleConfigurationModal = (props: IProps) => {
     };
 
     return (
-        <LazyModal
+        <Modal
             isVisible={isVisible}
             size={modalSize ? modalSize : ModalSizes.MEDIUM}
             exitHandler={() => {
@@ -127,7 +126,7 @@ export const LocaleConfigurationModal = (props: IProps) => {
                 bodyWrapClass={classes.modalSuggestionOverride}
                 body={
                     <FrameBody>
-                        <div className={cx("frameBody-contents", classesFrameBody.contents)}>
+                        <div className={classesFrameBody.contents}>
                             <JsonSchemaForm
                                 schema={schema}
                                 instance={value}
@@ -165,6 +164,6 @@ export const LocaleConfigurationModal = (props: IProps) => {
                     </FrameFooter>
                 }
             />
-        </LazyModal>
+        </Modal>
     );
 };

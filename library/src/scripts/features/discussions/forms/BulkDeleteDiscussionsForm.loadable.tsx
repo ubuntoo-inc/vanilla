@@ -4,7 +4,7 @@
  * @license Proprietary
  */
 
-import { css, cx } from "@emotion/css";
+import { css } from "@emotion/css";
 import Translate from "@library/content/Translate";
 import { IBulkActionForm } from "@library/features/discussions/BulkActionsModal";
 import { useDiscussionCheckBoxContext } from "@library/features/discussions/DiscussionCheckboxContext";
@@ -41,9 +41,8 @@ export default function BulkDeleteDiscussionsForm(props: IBulkActionForm) {
 
     // Caching IDs because checkedDiscussionIDs will change during deletion process
     const [cachedActionIDs, setCachedIDs] = useState<RecordID[]>([]);
-    const { isDeletePending, deletionFailedIDs, deletionSuccessIDs, deleteSelectedIDs } = useBulkDelete(
-        cachedActionIDs,
-    );
+    const { isDeletePending, deletionFailedIDs, deletionSuccessIDs, deleteSelectedIDs } =
+        useBulkDelete(cachedActionIDs);
     const failedDiscussions = useDiscussionByIDs(deletionFailedIDs ?? []);
 
     const errorMessage = useMemo(() => {
@@ -54,9 +53,10 @@ export default function BulkDeleteDiscussionsForm(props: IBulkActionForm) {
             : null;
     }, [failedDiscussions]);
 
-    const isSuccess = useMemo(() => (deletionSuccessIDs && deletionSuccessIDs.length > 0) ?? false, [
-        deletionSuccessIDs,
-    ]);
+    const isSuccess = useMemo(
+        () => (deletionSuccessIDs && deletionSuccessIDs.length > 0) ?? false,
+        [deletionSuccessIDs],
+    );
 
     useEffect(() => {
         setCachedIDs(checkedDiscussionIDs);
@@ -68,7 +68,7 @@ export default function BulkDeleteDiscussionsForm(props: IBulkActionForm) {
                 header={<FrameHeader closeFrame={onCancel} title={t("Delete")} />}
                 body={
                     <FrameBody>
-                        <div className={cx("frameBody-contents", classesFrameBody.contents)}>
+                        <div className={classesFrameBody.contents}>
                             {errorMessage && (
                                 <Message
                                     className={errorMessageOffset}

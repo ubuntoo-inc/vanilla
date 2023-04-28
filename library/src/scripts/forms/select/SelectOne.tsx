@@ -35,7 +35,7 @@ export interface ISelectOneProps extends IMenuPlacement {
     noteAfterInput?: string;
     errors?: IFieldError[];
     searchable?: boolean;
-    value: IComboBoxOption | undefined;
+    value: IComboBoxOption | null | undefined;
     noOptionsMessage?: (props: OptionProps<any>) => JSX.Element | null;
     isLoading?: boolean;
     inputClassName?: string;
@@ -44,6 +44,7 @@ export interface ISelectOneProps extends IMenuPlacement {
     selectRef?: React.RefObject<Select>;
     onFocus?: () => void;
     maxHeight?: number;
+    name?: string;
 }
 
 export enum MenuPlacement {
@@ -126,6 +127,7 @@ export default function SelectOne(props: ISelectOneProps) {
                     menuPlacement={props.menuPlacement ?? "auto"}
                     ref={props.selectRef}
                     maxMenuHeight={props.maxHeight}
+                    name={props.name}
                 />
                 <Paragraph className={classesInputBlock.labelNote}>{props.noteAfterInput}</Paragraph>
                 <ErrorMessages id={errorID} errors={props.errors} />

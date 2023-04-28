@@ -5,16 +5,18 @@
  * @license GPL-2.0-only
  */
 
+use Vanilla\Formatting\FormatConfig;
 use Vanilla\Formatting\Formats\RichFormat;
-use \Vanilla\Formatting\Formats;
+use Vanilla\Formatting\Formats\Rich2Format;
+use Vanilla\Formatting\Formats;
 use Vanilla\Web\TwigStaticRenderer;
 use Vanilla\Formatting\Quill\Parser;
 
 /**
  * Plugin class for the Rich Editor.
  */
-class RichEditorPlugin extends Gdn_Plugin {
-
+class RichEditorPlugin extends Gdn_Plugin
+{
     const FORMAT_NAME = RichFormat::FORMAT_KEY;
     const CONFIG_QUOTE_ENABLE = "RichEditor.Quote.Enable";
     const CONFIG_REINTERPRET_ENABLE = "RichEditor.Reinterpret.Enable";
@@ -30,7 +32,8 @@ class RichEditorPlugin extends Gdn_Plugin {
      *
      * @param \Vanilla\Formatting\FormatService $formatService
      */
-    public function __construct(\Vanilla\Formatting\FormatService $formatService) {
+    public function __construct(\Vanilla\Formatting\FormatService $formatService)
+    {
         $this->formatService = $formatService;
         parent::__construct();
         self::$editorID++;
@@ -39,22 +42,25 @@ class RichEditorPlugin extends Gdn_Plugin {
     /**
      * {@inheritDoc}
      */
-    public function setup() {
-        saveToConfig('Garden.InputFormatter', RichFormat::FORMAT_KEY);
-        saveToConfig('Garden.MobileInputFormatter', RichFormat::FORMAT_KEY);
+    public function setup()
+    {
+        saveToConfig("Garden.InputFormatter", RichFormat::FORMAT_KEY);
+        saveToConfig("Garden.MobileInputFormatter", RichFormat::FORMAT_KEY);
         saveToConfig(self::CONFIG_QUOTE_ENABLE, true);
-        saveToConfig('EnabledPlugins.Quotes', false);
+        saveToConfig("EnabledPlugins.Quotes", false);
     }
 
-    public function onDisable() {
-        Gdn::config()->saveToConfig('Garden.InputFormatter', 'Markdown');
-        Gdn::config()->saveToConfig('Garden.MobileInputFormatter', 'Markdown');
+    public function onDisable()
+    {
+        Gdn::config()->saveToConfig("Garden.InputFormatter", "Markdown");
+        Gdn::config()->saveToConfig("Garden.MobileInputFormatter", "Markdown");
     }
 
     /**
      * @return int
      */
-    public static function getEditorID(): int {
+    public static function getEditorID(): int
+    {
         return self::$editorID;
     }
 
@@ -65,15 +71,37 @@ class RichEditorPlugin extends Gdn_Plugin {
      *
      * @return bool
      */
-    public function isFormRich(Gdn_Form $form): bool {
+    public function isFormRich(Gdn_Form $form): bool
+    {
         $data = $form->formData();
-        $format = $data['Format'] ?? null;
+        $format = $data["Format"] ?? null;
 
-        if (Gdn::config('Garden.ForceInputFormatter')) {
+        if (Gdn::config("Garden.ForceInputFormatter")) {
             return $this->isInputFormatterRich();
         }
 
         return $this->isFormatRich($format);
+    }
+
+    /**
+     * TODO: This should be removed after VNLA-2665 merges
+     * https://higherlogic.atlassian.net/browse/VNLA-2665
+     * Check to see if we should be using the Rich Editor 2
+     *
+     * @param Gdn_Form $form - A form instance.
+     *
+     * @return bool
+     */
+    public function isFormRich2(Gdn_Form $form): bool
+    {
+        $data = $form->formData();
+        $format = $data["Format"] ?? null;
+
+        if (Gdn::config("Garden.ForceInputFormatter")) {
+            return $this->isInputFormatterRich();
+        }
+
+        return $this->isFormatRich2($format);
     }
 
     /**
@@ -83,15 +111,23 @@ class RichEditorPlugin extends Gdn_Plugin {
      *
      * @return bool
      */
-    private function isForcedRich(Gdn_Form $form): bool {
-        return
-            // The form itself is not rich.
-            !$this->isFormRich($form)
-            // The current input formatter is rich.
-            && $this->isInputFormatterRich()
-            // The config setting to force rich is enabled.
-            && Gdn::config(self::CONFIG_REINTERPRET_ENABLE)
-        ;
+    private function isForcedRich(Gdn_Form $form): bool
+    {
+        // Get the format of the post
+        $data = $form->formData();
+        $formFormat = $data["Format"] ?? null;
+
+        // Ge the format set in config
+        $formatConfig = Gdn::getContainer()->get(FormatConfig::class);
+        $defaultFormat = $formatConfig->getDefaultFormat();
+
+        // If reinterpret is true, we should compare the two formats
+        if (Gdn::config(self::CONFIG_REINTERPRET_ENABLE)) {
+            return $formFormat !== $defaultFormat;
+        }
+
+        // Otherwise there is no need to force
+        return false;
     }
 
     /**
@@ -100,14 +136,29 @@ class RichEditorPlugin extends Gdn_Plugin {
      * @param string $format - Format string to check
      * @return bool
      */
-    private function isFormatRich(string $format): bool {
+    private function isFormatRich(string $format): bool
+    {
         return strcasecmp($format, RichFormat::FORMAT_KEY) === 0;
+    }
+
+    /**
+     * TODO: This should be removed after VNLA-2665 merges
+     * https://higherlogic.atlassian.net/browse/VNLA-2665
+     * Determine if the format string corresponds to rich2 format
+     *
+     * @param string $format - Format string to check
+     * @return bool
+     */
+    private function isFormatRich2(string $format): bool
+    {
+        return strcasecmp($format, Rich2Format::FORMAT_KEY) === 0;
     }
 
     /**
      * @return bool
      */
-    public function isInputFormatterRich(): bool {
+    public function isInputFormatterRich(): bool
+    {
         return $this->isFormatRich(Gdn_Format::defaultFormat());
     }
 
@@ -118,8 +169,10 @@ class RichEditorPlugin extends Gdn_Plugin {
      *
      * @return string[] Additional post formats.
      */
-    public function getPostFormats_handler(array $postFormats): array {
-        $postFormats[] = 'Rich'; // The config values have always been uppercase. (including in default configs).
+    public function getPostFormats_handler(array $postFormats): array
+    {
+        $postFormats[] = "Rich"; // The config values have always been uppercase. (including in default configs).
+        $postFormats[] = "Rich2";
         return $postFormats;
     }
 
@@ -131,75 +184,97 @@ class RichEditorPlugin extends Gdn_Plugin {
      * @param Gdn_Form $sender The Form Object
      * @param array $args Arguments from the event.
      */
-    public function gdn_form_beforeBodyBox_handler(Gdn_Form $sender, array $args) {
+    public function gdn_form_beforeBodyBox_handler(Gdn_Form $sender, array $args)
+    {
         $isRich = $this->isFormRich($sender);
+        $isRich2 = $this->isFormRich2($sender);
         $originalRecord = $sender->formData();
-        $body = $originalRecord['Body'] ?? false;
-        $originalFormat = $originalRecord['Format'] ?? false;
+        $body = $originalRecord["Body"] ?? false;
+        $originalFormat = $originalRecord["Format"] ?? false;
         $isForcedRich = $this->isForcedRich($sender);
+        $bodyFieldName = "Body";
 
-        if ($isRich || $isForcedRich) {
+        //in some cases our content is not under "Body" but "Description", e.g. group description, so we need to look at the right name here
+        if (!$body && $args["Column"] === "Description" && $originalRecord["Description"]) {
+            $body = $originalRecord["Description"];
+            $bodyFieldName = "Description";
+        }
+
+        if ($isRich || $isRich2 || $isForcedRich) {
             $controller = Gdn::controller();
             if ($controller) {
-                $controller->CssClass .= ' hasRichEditor';
+                $controller->CssClass .= " hasRichEditor";
             }
 
             $editorID = $this->getEditorID();
             $viewData = [
-                'editorID' => $editorID,
-                'descriptionID' => 'richEditor-'.$editorID.'-description',
-                'hasUploadPermission' => checkPermission('uploads.add'),
-                'uploadEnabled' => $args['Attributes']['UploadEnabled'] ?? true,
+                "editorID" => $editorID,
+                "descriptionID" => "richEditor-" . $editorID . "-description",
+                "hasUploadPermission" => checkPermission("uploads.add"),
+                "uploadEnabled" => $args["Attributes"]["UploadEnabled"] ?? true,
             ];
 
             if (!Gdn::session()->User->Admin) {
                 // If a category is set check for AllowFileUploads. (admins bypass this condition)
-                $categoryID = $controller->data('Category.CategoryID', $controller->data('ContextualCategoryID'));
+                $categoryID = $controller->data("Category.CategoryID", $controller->data("ContextualCategoryID"));
                 // Check the category exists.
                 $category = CategoryModel::categories($categoryID);
-                $viewData['uploadEnabled'] = CategoryModel::checkAllowFileUploads($category);
+                $viewData["uploadEnabled"] = CategoryModel::checkAllowFileUploads($category);
             }
-
-            if ($isForcedRich) {
-                $viewData['needsHtmlConversion'] = true;
-
-                $newBodyValue = $this->formatService->renderHTML($body, $originalFormat);
-                $sender->setValue("Body", $newBodyValue);
-                $sender->setValue("Format", RichFormat::FORMAT_KEY);
-            }
-            if ($this->isFormatRich($originalFormat)) {
+            $formatKey = ($this->isFormatRich($originalFormat)
+                    ? RichFormat::FORMAT_KEY
+                    : $this->isFormatRich2($originalFormat))
+                ? Rich2Format::FORMAT_KEY
+                : null;
+            if ($formatKey) {
                 // Filter out empty arrays from JSON. See https://higherlogic.atlassian.net/browse/VNLA-640
                 try {
-                    $newBodyValue = $this->formatService->filter($body, RichFormat::FORMAT_KEY);
-                    $sender->setValue("Body", $newBodyValue);
+                    $newBodyValue = $this->formatService->filter($body, $formatKey);
+                    $sender->setValue($bodyFieldName, $newBodyValue);
                 } catch (\Exception $e) {
                     // Ignore
+                }
+            }
+            if ($isForcedRich) {
+                $currentInputFormat = c("Garden.InputFormatter");
+                // If the current input format does not match the original post format, it needs to be converted
+                $shouldConvert = strcasecmp($currentInputFormat, $originalFormat) !== 0;
+                if ($shouldConvert) {
+                    $viewData["needsHtmlConversion"] = true;
+                    $newBodyValue = $this->formatService->renderHTML($body, $originalFormat);
+                    $sender->setValue($bodyFieldName, $newBodyValue);
+                    $sender->setValue(
+                        "Format",
+                        $this->isFormatRich2(Gdn_Format::defaultFormat())
+                            ? Rich2Format::FORMAT_KEY
+                            : RichFormat::FORMAT_KEY
+                    );
                 }
             }
 
             $rendered = TwigStaticRenderer::renderTwigStatic("@rich-editor/rich-editor.twig", $viewData);
 
             // Render the editor view.
-            $args['BodyBox'] .= $rendered;
-        } elseif (c('Garden.ForceInputFormatter')) {
+            $args["BodyBox"] .= $rendered;
+        } elseif (c("Garden.ForceInputFormatter")) {
             /*
                 Allow rich content to be rendered and modified if the InputFormat
                 is different from the original format in no longer applicable or
                 forced to be different by Garden.ForceInputFormatter.
             */
-            if ($body && (c('Garden.InputFormatter') !== $originalFormat)) {
-                switch (strtolower(c('Garden.InputFormatter', 'unknown'))) {
+            if ($body && c("Garden.InputFormatter") !== $originalFormat) {
+                switch (strtolower(c("Garden.InputFormatter", "unknown"))) {
                     case Formats\TextFormat::FORMAT_KEY:
                     case Formats\TextExFormat::FORMAT_KEY:
                         $newBodyValue = $this->formatService->renderPlainText($body, Formats\RichFormat::FORMAT_KEY);
-                        $sender->setValue("Body", $newBodyValue);
+                        $sender->setValue($bodyFieldName, $newBodyValue);
                         break;
-                    case 'unknown':
+                    case "unknown":
                         // Do nothing
                         break;
                     default:
                         $newBodyValue = $this->formatService->renderHTML($body, Formats\HtmlFormat::FORMAT_KEY);
-                        $sender->setValue("Body", $newBodyValue);
+                        $sender->setValue($bodyFieldName, $newBodyValue);
                 }
             }
         }
@@ -211,8 +286,12 @@ class RichEditorPlugin extends Gdn_Plugin {
      * @param Gdn_Controller $sender
      * @param array $args
      */
-    public function base_afterFlag_handler($sender, $args) {
-        if ($this->isInputFormatterRich() && c(self::CONFIG_QUOTE_ENABLE, true)) {
+    public function base_afterFlag_handler($sender, $args)
+    {
+        if (
+            $this->isInputFormatterRich() ||
+            ($this->isFormatRich2(Gdn_Format::defaultFormat()) && c(self::CONFIG_QUOTE_ENABLE, true))
+        ) {
             $this->addQuoteButton($sender, $args);
         }
     }
@@ -223,39 +302,46 @@ class RichEditorPlugin extends Gdn_Plugin {
      * @param Gdn_Controller $sender
      * @param array $args
      */
-    protected function addQuoteButton($sender, $args) {
+    protected function addQuoteButton($sender, $args)
+    {
         // There are some case were Discussion is not set as an event argument so we use the sender data instead.
-        $discussion = $sender->data('Discussion');
-        $discussion = (is_array($discussion)) ? (object)$discussion : $discussion;
+        $discussion = $sender->data("Discussion");
+        $discussion = is_array($discussion) ? (object) $discussion : $discussion;
 
         if (!$discussion) {
             return;
         }
 
-
         if (!Gdn::session()->UserID) {
             return;
         }
 
-        if (!Gdn::session()->checkPermission('Vanilla.Comments.Add', false, 'Category', $discussion->PermissionCategoryID)) {
+        if (
+            !Gdn::session()->checkPermission(
+                "Vanilla.Comments.Add",
+                false,
+                "Category",
+                $discussion->PermissionCategoryID
+            )
+        ) {
             return;
         }
 
-        if (isset($args['Comment'])) {
-            $url = commentUrl($args['Comment']);
+        if (isset($args["Comment"])) {
+            $url = commentUrl($args["Comment"]);
         } elseif ($discussion) {
             $url = discussionUrl($discussion);
         } else {
             return;
         }
 
-        $icon = sprite('ReactQuote', 'ReactSprite');
-        $linkText = $icon.' '.t('Quote');
-        $classes = 'ReactButton Quote Visible js-quoteButton';
+        $icon = sprite("ReactQuote", "ReactSprite");
+        $linkText = $icon . " " . t("Quote");
+        $classes = "ReactButton Quote Visible js-quoteButton";
 
-        echo Gdn_Theme::bulletItem('Flags');
+        echo Gdn_Theme::bulletItem("Flags");
         echo "<a href='#' role='button' data-scrape-url='$url' role='button' class='$classes'>$linkText</a>";
-        echo ' ';
+        echo " ";
     }
 
     /**
@@ -278,21 +364,23 @@ class RichEditorPlugin extends Gdn_Plugin {
         $form->setValue(self::CONFIG_REINTERPRET_ENABLE, c(self::CONFIG_REINTERPRET_ENABLE));
 
         $openingLiTag = "<li class='form-group js-richFormGroup Hidden' data-formatter-type='Rich'>";
-        $additionalFormItemHTML .= $openingLiTag
-            .VanillaSettingsController::postFormatReintrerpretToggle($form, self::CONFIG_REINTERPRET_ENABLE, "Rich")
-        ."</li>";
+        $additionalFormItemHTML .=
+            $openingLiTag .
+            VanillaSettingsController::postFormatReintrerpretToggle($form, self::CONFIG_REINTERPRET_ENABLE, "Rich") .
+            "</li>";
 
-        $additionalFormItemHTML .= $openingLiTag
-            .$form->toggle(
+        $additionalFormItemHTML .=
+            $openingLiTag .
+            $form->toggle(
                 self::CONFIG_QUOTE_ENABLE,
-                t('Enable Rich Quotes'),
+                t("Enable Rich Quotes"),
                 [],
                 t(
-                    'RichEditor.QuoteEnable.Notes',
+                    "RichEditor.QuoteEnable.Notes",
                     'Use the following option to enable quotes for the Rich Editor. This will only apply if the default formatter is "Rich".'
                 )
-            )
-            ."</li>";
+            ) .
+            "</li>";
         return $additionalFormItemHTML;
     }
 }

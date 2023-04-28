@@ -1,6 +1,6 @@
 /*
  * @author Stéphane LaFlèche <stephane.l@vanillaforums.com>
- * @copyright 2009-2019 Vanilla Forums Inc.
+ * @copyright 2009-2022 Vanilla Forums Inc.
  * @license GPL-2.0-only
  */
 
@@ -10,11 +10,11 @@ import DropDownItemButton from "@library/flyouts/items/DropDownItemButton";
 import DropDownItemLink from "@library/flyouts/items/DropDownItemLink";
 import { ButtonTypes } from "@library/forms/buttonTypes";
 import { selectBoxClasses } from "@library/forms/select/selectBoxStyles";
+import { TabHandler } from "@vanilla/dom-utils";
 import { useUniqueID } from "@library/utility/idUtils";
 import React, { useState, useRef } from "react";
 import ConditionalWrap from "@library/layout/ConditionalWrap";
 import { NBSP, DownTriangleIcon, CheckCompactIcon } from "@library/icons/common";
-import classNames from "classnames";
 import { cx } from "@emotion/css";
 
 export interface ISelectBoxItem {
@@ -76,8 +76,35 @@ export default function SelectBox(props: ISelectBoxProps) {
     const classes = selectBoxClasses();
     const classesDropDown = dropDownClasses();
 
+    function handleKeyPress(event: React.KeyboardEvent) {
+        const container = document.getElementById(id + "-content");
+        if (container === null || document.activeElement === null) {
+            return;
+        }
+
+        const tabHandler = new TabHandler(container);
+        const target = event.target as HTMLElement;
+
+        if ((!event.shiftKey && event.key === "Tab") || event.key === "ArrowDown") {
+            event.preventDefault();
+            const nextElement = tabHandler.getNext(target, false, true);
+            nextElement?.focus();
+        } else if ((event.shiftKey && event.key === "Tab") || event.key === "ArrowUp") {
+            event.preventDefault();
+            const prevElement = tabHandler.getNext(target, true, true);
+            prevElement?.focus();
+        } else if (event.key === " ") {
+            event.preventDefault();
+            (event.target as HTMLElement).click();
+        }
+    }
+
     return (
-        <div aria-describedby={props.describedBy} className={cx("selectBox", props.className)}>
+        <div
+            aria-describedby={props.describedBy}
+            className={cx("selectBox", props.className)}
+            onKeyDown={(e) => handleKeyPress(e)}
+        >
             <DropDown
                 isVisible={isVisible}
                 onVisibilityChange={(val) => {

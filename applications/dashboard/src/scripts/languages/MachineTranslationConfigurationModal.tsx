@@ -6,7 +6,6 @@
 
 import { DashboardFormControl, DashboardFormControlGroup } from "@dashboard/forms/DashboardFormControl";
 import { ITranslationService } from "@dashboard/languages/LanguageSettingsTypes";
-import { cx } from "@emotion/css";
 import Button from "@library/forms/Button";
 import { ButtonTypes } from "@library/forms/buttonTypes";
 import Frame from "@library/layout/frame/Frame";
@@ -15,7 +14,7 @@ import { frameBodyClasses } from "@library/layout/frame/frameBodyStyles";
 import FrameFooter from "@library/layout/frame/FrameFooter";
 import { frameFooterClasses } from "@library/layout/frame/frameFooterStyles";
 import FrameHeader from "@library/layout/frame/FrameHeader";
-import LazyModal from "@library/modal/LazyModal";
+import Modal from "@library/modal/Modal";
 import ModalSizes from "@library/modal/ModalSizes";
 import { useUniqueID } from "@library/utility/idUtils";
 import { t } from "@vanilla/i18n";
@@ -61,7 +60,7 @@ export const MachineTranslationConfigurationModal = (props: IProps) => {
     }, [props.modalSize, service]);
 
     return (
-        <LazyModal
+        <Modal
             isVisible={isVisible}
             size={modalSize}
             exitHandler={() => {
@@ -83,7 +82,7 @@ export const MachineTranslationConfigurationModal = (props: IProps) => {
                     service &&
                     service.configSchema && (
                         <FrameBody>
-                            <div className={cx("frameBody-contents", classesFrameBody.contents)}>
+                            <div className={classesFrameBody.contents}>
                                 <JsonSchemaForm
                                     schema={service && service.configSchema}
                                     instance={value}
@@ -118,6 +117,6 @@ export const MachineTranslationConfigurationModal = (props: IProps) => {
                     </FrameFooter>
                 }
             />
-        </LazyModal>
+        </Modal>
     );
 };

@@ -5,9 +5,10 @@
 
 const path = require("path");
 const fs = require("fs");
-const glob = require("glob");
+const glob = require("globby");
 const VANILLA_ROOT = path.resolve(__dirname, "../../");
 
+const isProd = process.env.NODE_ENV === "production";
 const sectionEnv = process.env.STORYBOOK_SECTION;
 const hasModern = !sectionEnv || sectionEnv === "modern";
 const hasFoundation = !sectionEnv || sectionEnv === "foundation";
@@ -17,7 +18,7 @@ const globs = [];
 
 function scanAddons(addonDir) {
     const keys = glob
-        .sync(path.join(VANILLA_ROOT, addonDir + "/*"))
+        .sync(path.join(VANILLA_ROOT, addonDir + "/*"), { onlyDirectories: true })
         .map((dir) => dir.replace(path.join(VANILLA_ROOT, addonDir + "/"), ""));
 
     keys.forEach((key) => {
@@ -56,9 +57,31 @@ module.exports = {
                 controls: false,
             },
         },
+        {
+            name: "storybook-addon-swc",
+            options: {
+                enableSwcLoader: true,
+                enableSwcMinify: true,
+                swcLoaderOptions: {
+                    parseMap: !isProd,
+                    jsc: {
+                        transform: {
+                            react: {
+                                // Enable react refresh in development.
+                                refresh: !isProd,
+                            },
+                        },
+                    },
+                },
+                swcMinifyOptions: {},
+            },
+        },
     ],
     typescript: {
         check: false,
         reactDocgen: "none",
+    },
+    reactOptions: {
+        fastRefresh: !isProd,
     },
 };

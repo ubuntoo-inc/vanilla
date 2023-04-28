@@ -105,9 +105,9 @@ export const checkRadioClasses = useThemeCache(() => {
     const label = css({
         lineHeight: styleUnit(vars.sizing.width),
         paddingLeft: styleUnit(8),
+        paddingRight: styleUnit(8),
         cursor: "pointer",
         ...userSelect(),
-        width: calc(`100% - ${styleUnit(vars.sizing.width)}`),
     });
 
     const labelBold = css({
@@ -206,25 +206,29 @@ export const checkRadioClasses = useThemeCache(() => {
     //.checkbox
     const root = css({
         display: important("flex"),
-        flexWrap: "wrap",
         alignItems: "center",
         outline: 0,
         ...Mixins.padding(vars.spacing),
-        ...{
-            [`&&`]: {
-                margin: 0,
-            },
-            [`&.isHorizontal.isHorizontal.isHorizontal`]: Mixins.margin({
-                all: 0,
-                right: px(globalVars.spacer.size / 2),
-            }),
-            [`&.${isDashboard} + .info`]: {
-                ...Mixins.margin({
-                    top: styleUnit(2),
-                    bottom: styleUnit(6),
-                }),
-            },
+        [`&&`]: {
+            margin: 0,
         },
+        "&.hugLeft": {
+            paddingLeft: 0,
+        },
+        [`&.isHorizontal.isHorizontal.isHorizontal`]: Mixins.margin({
+            all: 0,
+            right: px(globalVars.spacer.size / 2),
+        }),
+        [`&.${isDashboard} + .info`]: {
+            ...Mixins.margin({
+                top: styleUnit(2),
+                bottom: styleUnit(6),
+            }),
+        },
+    });
+
+    const fullWidth = css({
+        width: "100%",
     });
 
     const grid = css({
@@ -260,6 +264,7 @@ export const checkRadioClasses = useThemeCache(() => {
         iconContainer,
         radioIcon,
         checkIcon,
+        fullWidth,
         disk,
         diskIcon,
         input,

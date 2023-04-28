@@ -6,6 +6,8 @@
 import { AxiosError, AxiosResponse } from "axios";
 import { IUserFragment } from "@library/@types/api/users";
 import { RecordID } from "@vanilla/utils";
+import { ImageSourceSet } from "@library/utility/appUtils";
+import { IFieldError } from "@vanilla/json-schema-forms";
 
 export enum LoadStatus {
     PENDING = "PENDING",
@@ -43,12 +45,8 @@ export interface IApiResponse<DataType = any> {
     headers?: any;
 }
 
-export interface IFieldError {
-    message: string; // translated message
-    code?: string; // translation code
-    field: string;
-    status?: number; // HTTP status
-}
+// Moved
+export type { IFieldError };
 
 export interface IServerError {
     message: string;
@@ -58,7 +56,7 @@ export interface IServerError {
     };
 }
 
-export interface IApiError extends AxiosError {
+export interface IApiError extends AxiosError, IServerError {
     response: AxiosResponse<IServerError | null>;
 }
 
@@ -69,6 +67,16 @@ interface IMultiType<T> {
 
 export type MultiTypeRecord<T, Subtract extends keyof T, TypeName extends string> = Omit<T, Subtract> &
     IMultiType<TypeName>;
+
+/**
+ * Require one of two properties ona given interface
+ *
+ * https://stackoverflow.com/questions/40510611/typescript-interface-require-one-of-two-properties-to-exist
+ */
+export type RequireAtLeastOne<T, Keys extends keyof T = keyof T> = Pick<T, Exclude<keyof T, Keys>> &
+    {
+        [K in Keys]-?: Required<Pick<T, K>> & Partial<Pick<T, Exclude<Keys, K>>>;
+    }[Keys];
 
 export interface INavigationItemBadge {
     type: navigationItemBadgeType;
@@ -132,4 +140,20 @@ export enum Format {
     HTML = "html",
     BBCODE = "bbcode",
     RICH = "rich",
+}
+
+export interface IImage {
+    url?: string;
+    urlSrcSet?: ImageSourceSet;
+    alt?: string;
+}
+
+export interface IFeaturedImage {
+    display: boolean;
+    fallbackImage?: string;
+}
+
+export interface IDateTimeRange {
+    start?: string;
+    end?: string;
 }

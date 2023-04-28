@@ -11,16 +11,18 @@ use Garden\Container\Container;
 use Garden\Http\HttpClient;
 use Garden\Http\HttpResponse;
 use Gdn;
+use League\Uri\Http;
 use PDO;
 use Vanilla\Addon;
 use Vanilla\AddonManager;
+use Vanilla\Utility\UrlUtils;
 use VanillaTests\TestDatabase;
 
 /**
  * The API client for Vanilla's API version 0.
  */
-class APIv0 extends HttpClient {
-
+class APIv0 extends HttpClient
+{
     /**
      * @var string The API key for making calls to the special test helper script.
      */
@@ -31,7 +33,6 @@ class APIv0 extends HttpClient {
      */
     private $config;
 
-
     /**
      * @var array The user context to make requests with.
      */
@@ -40,11 +41,10 @@ class APIv0 extends HttpClient {
     /**
      * APIv0 constructor.
      */
-    public function __construct() {
+    public function __construct()
+    {
         parent::__construct();
-        $this
-            ->setBaseUrl(getenv('TEST_BASEURL'))
-            ->setThrowExceptions(true);
+        $this->setBaseUrl(getenv("TEST_BASEURL"))->setThrowExceptions(true);
     }
 
     /**
@@ -52,11 +52,12 @@ class APIv0 extends HttpClient {
      *
      * @return string
      */
-    public function getDbHost() {
-        if (getenv('TEST_DB_HOST')) {
-            $dbHost = getenv('TEST_DB_HOST');
+    public function getDbHost()
+    {
+        if (getenv("TEST_DB_HOST")) {
+            $dbHost = getenv("TEST_DB_HOST");
         } else {
-            $dbHost = 'localhost';
+            $dbHost = "localhost";
         }
         return $dbHost;
     }
@@ -66,13 +67,14 @@ class APIv0 extends HttpClient {
      *
      * @return string Returns the name of the database.
      */
-    public function getDbName() {
+    public function getDbName()
+    {
         $host = parse_url($this->getBaseUrl(), PHP_URL_HOST);
 
-        if (getenv('TEST_DB_NAME')) {
-            $dbname = getenv('TEST_DB_NAME');
+        if (getenv("TEST_DB_NAME")) {
+            $dbname = getenv("TEST_DB_NAME");
         } else {
-            $dbname = preg_replace('`[^a-z]`i', '_', $host);
+            $dbname = preg_replace("`[^a-z]`i", "_", $host);
         }
         return $dbname;
     }
@@ -82,8 +84,9 @@ class APIv0 extends HttpClient {
      *
      * @return string Returns a username.
      */
-    public function getDbUser() {
-        return getenv('TEST_DB_USER');
+    public function getDbUser()
+    {
+        return getenv("TEST_DB_USER");
     }
 
     /**
@@ -91,8 +94,9 @@ class APIv0 extends HttpClient {
      *
      * @return string Returns a password.
      */
-    public function getDbPassword() {
-        return getenv('TEST_DB_PASSWORD');
+    public function getDbPassword()
+    {
+        return getenv("TEST_DB_PASSWORD");
     }
 
     /**
@@ -102,8 +106,25 @@ class APIv0 extends HttpClient {
      * @param mixed $default The value to return if there is no config setting.
      * @return mixed Returns the config setting or {@link $default}.
      */
-    public function getConfig($key, $default = null) {
-        return valr($key, $this->config, $default);
+    public function getConfig($key, $default = null)
+    {
+        return $this->getGdnConfig()->get($key, $default);
+    }
+
+    /**
+     * Get a Gdn_Configuration for the site.
+     *
+     * @return \Gdn_Configuration
+     */
+    private function getGdnConfig(): \Gdn_Configuration
+    {
+        $config = new \Gdn_Configuration();
+        // Load default baseline Garden configurations.
+        $config->load(PATH_CONF . "/config-defaults.php");
+
+        // Load installation-specific configuration so that we know what apps are enabled.
+        $config->load($this->getConfigPath(), "Configuration", true);
+        return $config;
     }
 
     /**
@@ -111,9 +132,10 @@ class APIv0 extends HttpClient {
      *
      * @return string Returns the path to the database.
      */
-    public function getConfigPath() {
+    public function getConfigPath()
+    {
         $host = parse_url($this->getBaseUrl(), PHP_URL_HOST);
-        $path = PATH_ROOT."/conf/$host.php";
+        $path = PATH_ROOT . "/conf/$host.php";
         return $path;
     }
 
@@ -123,15 +145,16 @@ class APIv0 extends HttpClient {
      * @param bool $db Whether or not to add the db name to the DSN.
      * @return \PDO Returns a connection to the database.
      */
-    public function getPDO($db = true) {
+    public function getPDO($db = true)
+    {
         static $pdo;
 
         if (!$pdo) {
             $options = [
                 PDO::ATTR_PERSISTENT => false,
-                PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION
+                PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
             ];
-            $dsn = "mysql:host=".$this->getDbHost().";charset=utf8mb4";
+            $dsn = "mysql:host=" . $this->getDbHost() . ";charset=utf8mb4";
             if ($db) {
                 $dbname = $this->getDbName();
                 $dsn .= ";dbname=$dbname";
@@ -150,14 +173,15 @@ class APIv0 extends HttpClient {
      * @param string $tk
      * @return string
      */
-    private function generateTKCookie($userID, $tk) {
+    private function generateTKCookie($userID, $tk)
+    {
         $timestamp = time();
 
         $payload = "{$tk}:{$userID}:{$timestamp}";
         $signature = hash_hmac(
-            $this->getConfig('Garden.Cookie.HashMethod', 'md5'),
+            $this->getConfig("Garden.Cookie.HashMethod", "md5"),
             $payload,
-            $this->getConfig('Garden.Cookie.Salt')
+            $this->getConfig("Garden.Cookie.Salt")
         );
 
         return "{$payload}:{$signature}";
@@ -166,17 +190,19 @@ class APIv0 extends HttpClient {
     /**
      * {@inheritdoc}
      */
-    public function handleErrorResponse(HttpResponse $response, $options = []) {
-        $options += ['throw' => $this->throwExceptions];
+    public function handleErrorResponse(HttpResponse $response, $options = [])
+    {
+        $options += ["throw" => $this->throwExceptions];
 
-        if ($options['throw']) {
+        if ($options["throw"]) {
             $body = $response->getBody();
             if (is_array($body)) {
-                $message = $body['Exception'] ?? ($body['message'] ?? $response->getReasonPhrase());
-            } else {
+                $message = $body["Exception"] ?? ($body["message"] ?? $response->getReasonPhrase());
+            }
+            if (empty($message)) {
                 $message = $response->getRawBody();
             }
-            throw new \Exception($message.' ('.$response->getStatusCode().')', $response->getStatusCode());
+            throw new \Exception($message . " (" . $response->getStatusCode() . ")", $response->getStatusCode());
         }
     }
 
@@ -186,7 +212,8 @@ class APIv0 extends HttpClient {
      * @param string $title The title of the app.
      * @throws \Exception Throws an exception if Vanilla fails to install.
      */
-    public function install($title = '') {
+    public function install($title = "")
+    {
         $this->createDatabase();
 
         // Touch the config file because hhvm runs as root and we don't want the config file to have those permissions.
@@ -195,27 +222,26 @@ class APIv0 extends HttpClient {
         chmod($configPath, 0777);
         $apiKey = sha1(random_bytes(16));
         $this->saveToConfig([
-            'Garden.Errors.StackTrace' => true,
-            'Test.APIKey' => $apiKey,
+            "Garden.Errors.StackTrace" => true,
+            "Test.APIKey" => $apiKey,
         ]);
         self::setAPIKey($apiKey);
 
         // Install Vanilla via cURL.
         $post = [
-            'Database-dot-Host' => $this->getDbHost(),
-            'Database-dot-Name' => $this->getDbName(),
-            'Database-dot-User' => $this->getDbUser(),
-            'Database-dot-Password' => $this->getDbPassword(),
-            'Garden-dot-Title' => $title ?: 'Vanilla Tests',
-            'Email' => 'circleci@example.com',
-            'Name' => 'circleci',
-            'Password' => 'circleci',
-            'PasswordMatch' => 'circleci',
-            'HtaccessAction' => 'skip',
+            "Database-dot-Host" => $this->getDbHost(),
+            "Database-dot-Name" => $this->getDbName(),
+            "Database-dot-User" => $this->getDbUser(),
+            "Database-dot-Password" => $this->getDbPassword(),
+            "Garden-dot-Title" => $title ?: "Vanilla Tests",
+            "Email" => "circleci@example.com",
+            "Name" => "circleci",
+            "Password" => "circleci",
+            "PasswordMatch" => "circleci",
         ];
 
-        $r = $this->post('/dashboard/setup.json', $post);
-        if (!$r['Installed']) {
+        $r = $this->post("/dashboard/setup.json", $post);
+        if (!$r["Installed"]) {
             throw new \Exception("Vanilla did not install.");
         }
 
@@ -228,13 +254,14 @@ class APIv0 extends HttpClient {
      * @param array $array The cookie value array.
      * @return string Returns a string suitable to be passed to a cookie header.
      */
-    public static function cookieEncode(array $array) {
+    public static function cookieEncode(array $array)
+    {
         $pairs = [];
         foreach ($array as $key => $value) {
-            $pairs[] = "$key=".rawurlencode($value);
+            $pairs[] = "$key=" . rawurlencode($value);
         }
 
-        $result = implode('; ', $pairs);
+        $result = implode("; ", $pairs);
         return $result;
     }
 
@@ -242,33 +269,47 @@ class APIv0 extends HttpClient {
      * {@inheritdoc}
      * @throws \Exception Throws an exception when Vanilla isn't properly configured.
      */
-    public function createRequest(string $method, string $uri, $body, array $headers = [], array $options = []) {
+    public function createRequest(string $method, string $uri, $body, array $headers = [], array $options = [])
+    {
         $request = parent::createRequest($method, $uri, $body, $headers, $options);
+
+        $uri = Http::createFromString($request->getUrl());
+
+        if (str_ends_with($uri->getPath(), ".json")) {
+            // What a horrific bug. I still would rather not need to configure nginx for a couple old tests
+            // So instead we map the .json suffixes to just use the delivery type.
+            // https://bugs.php.net/bug.php?id=61286
+            $uri = $uri->withPath(str_replace(".json", "", $uri->getPath()));
+            $uri = UrlUtils::replaceQuery($uri, [
+                "DeliveryType" => DELIVERY_TYPE_DATA,
+            ]);
+            $request->setUrl((string) $uri);
+        }
 
         // Add the cookie of the calling user.
         if ($user = $this->getUser()) {
-            $cookieName = $this->getConfig('Garden.Cookie.Name', 'Vanilla');
+            $cookieName = $this->getConfig("Garden.Cookie.Name", "Vanilla");
 
             $cookieArray = [
-                $cookieName => $this->vanillaCookieString($user['UserID']),
-                "{$cookieName}-tk" => $this->generateTKCookie($user['UserID'], $user['tk'])
+                $cookieName => $this->vanillaCookieString($user["UserID"]),
+                "{$cookieName}-tk" => $this->generateTKCookie($user["UserID"], $user["tk"]),
             ];
 
-            $request->setHeader('Cookie', static::cookieEncode($cookieArray));
+            $request->setHeader("Cookie", static::cookieEncode($cookieArray));
 
-            if (!in_array($request->getMethod(), ['GET', 'OPTIONS'])) {
+            if (!in_array($request->getMethod(), ["GET", "OPTIONS"])) {
                 $body = $request->getBody();
                 if (is_array($body)) {
-                    if (!isset($body['TransientKey'])) {
-                        $body['TransientKey'] = $user['tk'];
+                    if (!isset($body["TransientKey"])) {
+                        $body["TransientKey"] = $user["tk"];
                         $request->setBody($body);
                     }
                 } elseif (is_string($body)) {
-                    if (strpos($body, 'TransientKey') === false) {
+                    if (strpos($body, "TransientKey") === false) {
                         if (!empty($body)) {
-                            $body .= '&';
+                            $body .= "&";
                         }
-                        $body .= http_build_query(['TransientKey' => $user['tk']]);
+                        $body .= http_build_query(["TransientKey" => $user["tk"]]);
                         $request->setBody($body);
                     }
                 }
@@ -288,12 +329,13 @@ class APIv0 extends HttpClient {
      * @return string Returns a string that can be used as a Vanilla session cookie.
      * @throws \Exception Throws an exception when there is no cookie salt configured.
      */
-    public function vanillaCookieString($userID, $secret = '', $algo = 'md5') {
-        $expires = strtotime('+2 days');
+    public function vanillaCookieString($userID, $secret = "", $algo = "md5")
+    {
+        $expires = strtotime("+2 days");
         $keyData = "$userID-$expires";
 
         if (empty($secret)) {
-            $secret = $this->getConfig('Garden.Cookie.Salt');
+            $secret = $this->getConfig("Garden.Cookie.Salt");
             if (empty($secret)) {
                 // Throw a noisy exception because something is wrong.
                 throw new \Exception("The cookie salt is empty.", 500);
@@ -304,7 +346,7 @@ class APIv0 extends HttpClient {
         $keyHashHash = hash_hmac($algo, $keyData, $keyHash);
 
         $cookieArray = [$keyData, $keyHashHash, time(), $userID, $expires];
-        $cookieString = implode('|', $cookieArray);
+        $cookieString = implode("|", $cookieArray);
 
         return $cookieString;
     }
@@ -316,7 +358,8 @@ class APIv0 extends HttpClient {
      *
      * @return array Returns the site's config.
      */
-    public function loadConfigDirect() {
+    public function loadConfigDirect()
+    {
         $path = $this->getConfigPath();
 
         if (file_exists($path)) {
@@ -337,7 +380,8 @@ class APIv0 extends HttpClient {
      * @return array|\PDOStatement
      * @throws \Exception Throws an exception if the query fails.
      */
-    public function query($sql, array $params = [], $returnStatement = false) {
+    public function query($sql, array $params = [], $returnStatement = false)
+    {
         $pdo = $this->getPDO();
         $stmt = $pdo->prepare($sql);
 
@@ -362,7 +406,8 @@ class APIv0 extends HttpClient {
      * @return array|null Returns the first row of the query or **null** if there is no data.
      * @throws \Exception Throws an exception if there was a problem executing the query.
      */
-    public function queryOne($sql, $params = []) {
+    public function queryOne($sql, $params = [])
+    {
         $data = $this->query($sql, $params);
         if (empty($data)) {
             return null;
@@ -372,33 +417,30 @@ class APIv0 extends HttpClient {
     }
 
     /**
-     * Save some config values via API.
-     *
-     * This method saves config values via a back-door endpoint copied to cgi-bin.
-     * This is necessary because HHVM runs as root and takes over the config file and so it can only be edited in an
-     * API context.
+     * Save some config values.
      *
      * @param array $values The values to save to the config.
      * @return array
      */
-    public function saveToConfig(array $values) {
-        $r = $this->post(
-            '/cgi-bin/saveconfig.php',
-            $values,
-            ['Content-Type: application/json;charset=utf-8']
-        );
-        $this->config = $r->getBody();
-        return $this->config;
+    public function saveToConfig(array $values)
+    {
+        $config = $this->getGdnConfig();
+        $config->saveToConfig($values);
+        $config->save();
+        return $config->get(".");
     }
 
     /**
-     * Delete the config via API.
+     * Delete the config.
      */
-    public function deleteConfig() {
-        $this->post('/cgi-bin/saveconfig.php?deleteConfig=true');
+    public function deleteConfig()
+    {
+        if (file_exists($this->getConfigPath())) {
+            unlink($this->getConfigPath());
+        }
 
         if (file_exists($this->getConfigPath())) {
-            throw new \Exception('Delete config did not work!');
+            throw new \Exception("Delete config did not work!");
         }
     }
 
@@ -409,22 +451,20 @@ class APIv0 extends HttpClient {
      * @param string $password The password of the user.
      * @return HttpResponse Returns the response for signing in the user.
      */
-    public function signInUser($username, $password) {
-        $r = $this->post(
-            '/entry/password.json',
-            ['Email' => $username, 'Password' => $password]
-        );
+    public function signInUser($username, $password)
+    {
+        $r = $this->post("/entry/password.json", ["Email" => $username, "Password" => $password]);
 
         return $r;
     }
-
 
     /**
      * Uninstall Vanilla.
      *
      * @throws \Exception Throws an exception if the config file cannot be deleted.
      */
-    public function uninstall() {
+    public function uninstall()
+    {
         $pdo = $this->getPDO(false);
 
         // Delete the config file.
@@ -440,7 +480,8 @@ class APIv0 extends HttpClient {
      *
      * @return mixed Returns the apiKey.
      */
-    public static function getApiKey() {
+    public static function getApiKey()
+    {
         return self::$apiKey;
     }
 
@@ -450,7 +491,8 @@ class APIv0 extends HttpClient {
      * @param mixed $apiKey
      * @return APIv0 Returns `$this` for fluent calls.
      */
-    public static function setApiKey($apiKey) {
+    public static function setApiKey($apiKey)
+    {
         self::$apiKey = $apiKey;
     }
 
@@ -459,7 +501,8 @@ class APIv0 extends HttpClient {
      *
      * @return array Returns a user array.
      */
-    public function getUser() {
+    public function getUser()
+    {
         return $this->user;
     }
 
@@ -470,8 +513,9 @@ class APIv0 extends HttpClient {
      * @return array|null Returns the system user or **null** if they aren't found.
      * @throws \Exception Throws an exception if {@link $throw} is **true** and the system user isn't found.
      */
-    public function querySystemUser($throw = false) {
-        $user = $this->queryUser(['Admin' => 1], $throw);
+    public function querySystemUser($throw = false)
+    {
+        $user = $this->queryUser(["Admin" => 1], $throw);
         return $user;
     }
 
@@ -483,11 +527,12 @@ class APIv0 extends HttpClient {
      * @return array Returns the found user as an array.
      * @throws \Exception Throws an exception when the user isn't found and `$throw` is **true**.
      */
-    public function queryUserKey($userKey, $throw = false) {
+    public function queryUserKey($userKey, $throw = false)
+    {
         if (is_numeric($userKey)) {
-            $row = $this->queryUser(['UserID' => $userKey], $throw);
+            $row = $this->queryUser(["UserID" => $userKey], $throw);
         } elseif (is_string($userKey)) {
-            $row = $this->queryUser(['Name' => $userKey], $throw);
+            $row = $this->queryUser(["Name" => $userKey], $throw);
         }
 
         return $row;
@@ -501,16 +546,17 @@ class APIv0 extends HttpClient {
      * @return array|null Returns the user array or null if no user is found.
      * @throws \Exception Throws an exception when the user isn't found.
      */
-    public function queryUser($where, $throw = false) {
+    public function queryUser($where, $throw = false)
+    {
         // Build the where clause from the where array.
         $whereSql = [];
         $whereArgs = [];
         foreach ($where as $field => $value) {
             $whereSql[$field] = "$field = :$field";
-            $whereArgs[':'.$field] = $value;
+            $whereArgs[":" . $field] = $value;
         }
 
-        $sql = "select * from GDN_User where ".implode(' and ', $whereSql);
+        $sql = "select * from GDN_User where " . implode(" and ", $whereSql);
         $row = $this->queryOne($sql, $whereArgs);
         if (empty($row)) {
             if ($throw) {
@@ -519,9 +565,9 @@ class APIv0 extends HttpClient {
             return null;
         }
 
-        $attributes = @unserialize($row['Attributes']);
-        $row['Attributes'] = $attributes;
-        $row['tk'] = $attributes['TransientKey'] ?? '';
+        $attributes = @unserialize($row["Attributes"]);
+        $row["Attributes"] = $attributes;
+        $row["tk"] = $attributes["TransientKey"] ?? "";
 
         return $row;
     }
@@ -533,7 +579,8 @@ class APIv0 extends HttpClient {
      * current user.
      * @return APIv0 Returns `$this` for fluent calls.
      */
-    public function setUser($user) {
+    public function setUser($user)
+    {
         if ($user === null) {
             $this->user = null;
             return $this;
@@ -544,16 +591,17 @@ class APIv0 extends HttpClient {
         }
 
         $partialUser = [
-            'UserID' => $user['UserID'],
-            'Name' => $user['Name'],
-            'tk' => substr(md5(time()), 0, 16)
+            "UserID" => $user["UserID"],
+            "Name" => $user["Name"],
+            "tk" => substr(md5(time()), 0, 16),
         ];
 
         $this->user = $partialUser;
         return $this;
     }
 
-    public function createDatabase() {
+    public function createDatabase()
+    {
         // Create the database for Vanilla.
         $pdo = $this->getPDO(false);
         $dbname = $this->getDbName();
@@ -564,22 +612,23 @@ class APIv0 extends HttpClient {
     /**
      * Bootstrap some of the internal objects with this connection.
      */
-    public function bootstrap() {
-        $bootstrap = new \VanillaTests\Bootstrap('http://vanilla.test');
+    public function bootstrap()
+    {
+        $bootstrap = new \VanillaTests\Bootstrap("https://vanilla.test");
         $dic = new Container();
         $bootstrap->run($dic);
 
         // Make the core applications available.
         $adm = new AddonManager(
             [
-                Addon::TYPE_ADDON => ['/applications', '/plugins'],
-                Addon::TYPE_THEME => '/themes',
-                Addon::TYPE_LOCALE => '/locales'
+                Addon::TYPE_ADDON => ["/applications", "/plugins"],
+                Addon::TYPE_THEME => "/themes",
+                Addon::TYPE_LOCALE => "/locales",
             ],
-            PATH_ROOT.'/tests/cache/APIv0/vanilla-manager'
+            PATH_ROOT . "/tests/cache/APIv0/vanilla-manager"
         );
-        $adm->startAddonsByKey(['dashboard' => true, 'vanilla' => true, 'conversations' => true], Addon::TYPE_ADDON);
-        spl_autoload_register([$adm, 'autoload']);
+        $adm->startAddonsByKey(["dashboard" => true, "vanilla" => true, "conversations" => true], Addon::TYPE_ADDON);
+        spl_autoload_register([$adm, "autoload"]);
 
         $db = $dic->getArgs(TestDatabase::class, [$this->getPDO()]);
 
@@ -588,13 +637,14 @@ class APIv0 extends HttpClient {
             ->setInstance(Gdn::AliasUserModel, new \UserModel());
     }
 
-    public function terminate() {
+    public function terminate()
+    {
         $dic = Gdn::getContainer();
 
         // Cleanup to prevent corruption of other tests
         $dic->setInstance(AddonManager::class, null);
         $dic->setInstance(Gdn::AliasDatabase, null);
 
-        spl_autoload_unregister([Gdn::addonManager(), 'autoload']);
+        spl_autoload_unregister([Gdn::addonManager(), "autoload"]);
     }
 }

@@ -8,13 +8,18 @@
 namespace Vanilla\Widgets\React;
 
 use Garden\Schema\Schema;
+use Gdn;
 use Vanilla\Dashboard\Models\UserLeaderQuery;
 use Vanilla\Dashboard\UserLeaderService;
 use Vanilla\Dashboard\UserPointsModel;
+use Vanilla\Forms\ApiFormChoices;
+use Vanilla\Forms\FieldMatchConditional;
+use Vanilla\Forms\FormOptions;
+use Vanilla\Forms\SchemaForm;
+use Vanilla\Forms\StaticFormChoices;
 use Vanilla\Forum\Controllers\Api\DiscussionsApiIndexSchema;
-use Vanilla\Layout\Section\SectionThreeColumns;
-use Vanilla\Layout\Section\SectionTwoColumns;
 use Vanilla\Models\UserFragmentSchema;
+use Vanilla\Site\SiteSectionModel;
 use Vanilla\Utility\SchemaUtils;
 use Vanilla\Web\JsInterpop\AbstractReactModule;
 use Vanilla\Widgets\HomeWidgetContainerSchemaTrait;
@@ -22,8 +27,8 @@ use Vanilla\Widgets\HomeWidgetContainerSchemaTrait;
 /**
  * Widget with the users having the top points.
  */
-class LeaderboardWidget extends AbstractReactModule implements ReactWidgetInterface, CombinedPropsWidgetInterface, SectionAwareInterface {
-
+class LeaderboardWidget extends AbstractReactModule implements ReactWidgetInterface, CombinedPropsWidgetInterface
+{
     use CombinedPropsWidgetTrait;
     use HomeWidgetContainerSchemaTrait;
 
@@ -39,7 +44,8 @@ class LeaderboardWidget extends AbstractReactModule implements ReactWidgetInterf
      * @param UserLeaderService $userLeaderService
      * @param \UserModel $userModel
      */
-    public function __construct(UserLeaderService $userLeaderService, \UserModel $userModel) {
+    public function __construct(UserLeaderService $userLeaderService, \UserModel $userModel)
+    {
         parent::__construct();
         $this->userLeaderService = $userLeaderService;
         $this->userModel = $userModel;
@@ -52,8 +58,9 @@ class LeaderboardWidget extends AbstractReactModule implements ReactWidgetInterf
      *
      * @return array
      */
-    private function mapUserToWidgetItem(array $user): array {
-        $points = $user["Points"] ?? 0;
+    private function mapUserToWidgetItem(array $user): array
+    {
+        $points = $user["Points"] ?? ($user["points"] ?? 0);
         $user = UserFragmentSchema::normalizeUserFragment($user);
 
         return [
@@ -65,11 +72,26 @@ class LeaderboardWidget extends AbstractReactModule implements ReactWidgetInterf
     /**
      * @inheritDoc
      */
-    public function getProps(): ?array {
+    public function getProps(): ?array
+    {
+        //filter by category or siteSection (subcommunity)
+        $categoryID = null;
+        $siteSectionID = null;
+
+        if ($this->props["apiParams"]["filter"] === "category" && $this->props["apiParams"]["categoryID"]) {
+            $categoryID = $this->props["apiParams"]["categoryID"];
+        } elseif ($this->props["apiParams"]["filter"] === "siteSection" && $this->props["apiParams"]["siteSectionID"]) {
+            $siteSectionID = $this->props["apiParams"]["siteSectionID"];
+        }
+
         $query = new UserLeaderQuery(
-            $this->props['apiParams']['slotType'],
-            $this->props['apiParams']['categoryID'] ?? null,
-            $this->props['apiParams']['limit']
+            $this->props["apiParams"]["slotType"],
+            $categoryID,
+            $siteSectionID,
+            $this->props["apiParams"]["limit"],
+            $this->props["apiParams"]["includedRoleIDs"] ?? null,
+            $this->props["apiParams"]["excludedRoleIDs"] ?? null,
+            $this->props["apiParams"]["leaderboardType"] ?? null
         );
         $users = $this->userLeaderService->getLeaders($query);
         if (count($users) === 0) {
@@ -77,7 +99,7 @@ class LeaderboardWidget extends AbstractReactModule implements ReactWidgetInterf
         }
         $users = array_map([$this, "mapUserToWidgetItem"], $users);
         $result = array_merge($this->props, [
-            "leaders" => $users
+            "leaders" => $users,
         ]);
 
         return $result;
@@ -86,67 +108,133 @@ class LeaderboardWidget extends AbstractReactModule implements ReactWidgetInterf
     /**
      * @inheritDoc
      */
-    public static function getWidgetSchema(): Schema {
+    public static function getWidgetSchema(): Schema
+    {
         $categoryIDSchema = Schema::parse([
             "type" => "integer",
             "default" => null,
             "description" => "The category user points should be calculated in.",
-            "x-control" => DiscussionsApiIndexSchema::getCategoryIDFormOptions(),
+            "x-control" => DiscussionsApiIndexSchema::getCategoryIDFormOptions(
+                new FieldMatchConditional(
+                    "apiParams.filter",
+                    Schema::parse([
+                        "type" => "string",
+                        "const" => "category",
+                    ])
+                )
+            ),
         ]);
 
+        $includedRolesIDsSchema = Schema::parse([
+            "x-no-hydrate" => true,
+            "description" => "Roles to include to the leaderboard.",
+            "type" => "array",
+            "default" => [],
+            "x-control" => SchemaForm::dropDown(
+                new FormOptions(t("Included Roles"), t("Roles to include to the leaderboard."), t("All")),
+                new ApiFormChoices("/api/v2/roles", "/api/v2/roles/%s", "roleID", "name"),
+                null,
+                true
+            ),
+        ]);
+
+        $excludedRolesIDsSchema = Schema::parse([
+            "x-no-hydrate" => true,
+            "description" => "Roles to exclude from the leaderboard.",
+            "type" => "array",
+            "default" => [],
+            "x-control" => SchemaForm::dropDown(
+                new FormOptions(t("Excluded Roles"), t("Roles to exclude from the leaderboard."), t("All")),
+                new ApiFormChoices("/api/v2/roles", "/api/v2/roles/%s", "roleID", "name"),
+                null,
+                true
+            ),
+        ]);
+
+        $filterEnum = ["none", "category"];
+        $filterStaticFormChoices = ["none" => "None", "category" => "Category"];
+
+        $siteSectionModel = \Gdn::getContainer()->get(SiteSectionModel::class);
+        $siteSectionIDSchema = $siteSectionModel->getSiteSectionFormOption(
+            new FieldMatchConditional(
+                "apiParams.filter",
+                Schema::parse([
+                    "type" => "string",
+                    "const" => "siteSection",
+                ])
+            )
+        );
+
+        // include subcommunities filter
+        if ($siteSectionIDSchema !== null) {
+            $filterEnum[] = "siteSection";
+            $filterStaticFormChoices["siteSection"] = "Subcommunity";
+        }
+
+        $filterBySchema = Schema::parse([
+            "enum" => $filterEnum,
+            "description" => "Choose filter type.",
+            "default" => "none",
+            "type" => "string",
+            "x-control" => SchemaForm::dropDown(
+                new FormOptions("Filter By"),
+                new StaticFormChoices($filterStaticFormChoices)
+            ),
+        ]);
+
+        $apiParams = [
+            "slotType?" => UserPointsModel::slotTypeSchema(),
+            "leaderboardType?" => UserPointsModel::leaderboardTypeSchema(),
+            "filter?" => $filterBySchema,
+            "categoryID?" => $categoryIDSchema,
+            "siteSectionID?" => $siteSectionIDSchema,
+            "limit?" => UserPointsModel::limitSchema(),
+            "includedRoleIDs?" => $includedRolesIDsSchema,
+            "excludedRoleIDs?" => $excludedRolesIDsSchema,
+        ];
+
         $widgetSpecificSchema = Schema::parse([
-            'apiParams?' => Schema::parse([
-                "slotType?" => UserPointsModel::slotTypeSchema(),
-                'LeaderboardType?' => UserPointsModel::leaderboardTypeSchema(),
-                "limit?" => UserPointsModel::limitSchema(),
-                'categoryID:i?' => $categoryIDSchema,
-            ])
+            "apiParams?" => Schema::parse($apiParams),
         ]);
 
         return SchemaUtils::composeSchemas(
             self::widgetTitleSchema("All Time Leaders"),
             self::widgetSubtitleSchema("subtitle"),
             self::widgetDescriptionSchema(),
-            self::containerOptionsSchema("containerOptions"),
-            $widgetSpecificSchema
+            $widgetSpecificSchema,
+            self::containerOptionsSchema("containerOptions")
         );
     }
 
     /**
      * @inheritDoc
      */
-    public static function getComponentName(): string {
+    public static function getComponentName(): string
+    {
         return "LeaderboardWidget";
     }
 
     /**
      * @inheritDoc
      */
-    public static function getWidgetID(): string {
+    public static function getWidgetID(): string
+    {
         return "leaderboard";
     }
 
     /**
      * @inheritDoc
      */
-    public static function getWidgetName(): string {
+    public static function getWidgetName(): string
+    {
         return "Leaderboard";
     }
 
     /**
      * @return string
      */
-    public static function getWidgetIconPath(): string {
+    public static function getWidgetIconPath(): string
+    {
         return "/applications/dashboard/design/images/widgetIcons/leaderboard.svg";
-    }
-
-    /**
-     * @return array
-     */
-    public static function getRecommendedSectionIDs(): array {
-        return [
-            SectionTwoColumns::getWidgetID(),
-            SectionThreeColumns::getWidgetID(),
-        ];
     }
 }

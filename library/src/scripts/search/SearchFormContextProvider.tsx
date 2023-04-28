@@ -7,7 +7,7 @@ import { TypeAllIcon } from "@library/icons/searchIcons";
 import { FilterPanelAll } from "@library/search/panels/FilterPanelAll";
 import { SearchActions } from "@library/search/SearchActions";
 import { DEFAULT_CORE_SEARCH_FORM, INITIAL_SEARCH_STATE, searchReducer } from "@library/search/searchReducer";
-import { ISearchForm, ISearchRequestQuery, ISearchFormBase, ISearchSource } from "@library/search/searchTypes";
+import { ISearchForm, ISearchRequestQuery, ISearchSource } from "@library/search/searchTypes";
 import {
     ALLOWED_GLOBAL_SEARCH_FIELDS,
     ALL_CONTENT_DOMAIN_NAME,
@@ -18,7 +18,6 @@ import {
 import { t } from "@vanilla/i18n";
 import React, { ReactNode, useCallback, useContext, useEffect, useReducer, useState } from "react";
 import merge from "lodash/merge";
-import Result from "@library/result/Result";
 import { ISelectBoxItem } from "@library/forms/select/SelectBox";
 import { useSearchScope } from "@library/features/search/SearchScopeContext";
 import { getCurrentLocale } from "@vanilla/i18n";
@@ -29,6 +28,9 @@ import { getSiteSection } from "@library/utility/appUtils";
 import { getSearchAnalyticsData } from "@library/search/searchAnalyticsData";
 import { useSearchSources } from "@library/search/SearchSourcesContextProvider";
 import { stableObjectHash } from "@vanilla/utils";
+import { dateRangeToString } from "@library/search/utils";
+import { JsonSchema } from "@vanilla/json-schema-forms";
+import { usePermissionsContext } from "@library/features/users/PermissionsContext";
 
 interface IProps {
     children?: React.ReactNode;
@@ -56,6 +58,8 @@ export function getGlobalSearchSorts(): ISelectBoxItem[] {
 
 export function SearchFormContextProvider(props: IProps) {
     const [state, dispatch] = useReducer(searchReducer, INITIAL_SEARCH_STATE);
+
+    const { hasPermission } = usePermissionsContext();
 
     const { currentSource: searchSource } = useSearchSources();
 
@@ -86,9 +90,7 @@ export function SearchFormContextProvider(props: IProps) {
             }
         },
         PanelComponent: FilterPanelAll,
-        getAllowedFields: () => {
-            return ALLOWED_GLOBAL_SEARCH_FIELDS;
-        },
+        getAllowedFields: (_permissionChecker) => ALLOWED_GLOBAL_SEARCH_FIELDS,
         getRecordTypes: () => {
             // Gather all other domains, and return their types.
             const allTypes: string[] = [];
@@ -112,10 +114,9 @@ export function SearchFormContextProvider(props: IProps) {
             };
         },
         isIsolatedType: () => false,
-        ResultComponent: Result,
     };
 
-    const getDomains = () => {
+    const getDomains = (): ISearchDomain[] => {
         return [{ ...ALL_CONTENT_DOMAIN, name: t(ALL_CONTENT_DOMAIN.name) }, ...SearchService.pluggableDomains];
     };
 
@@ -127,36 +128,59 @@ export function SearchFormContextProvider(props: IProps) {
         );
     };
 
-    const getDate = (form: ISearchFormBase): string | undefined => {
-        let dateInserted: string | undefined;
-        if (form.startDate && form.endDate) {
-            if (form.startDate === form.endDate) {
-                // Simple equality.
-                dateInserted = form.startDate;
-            } else {
-                // Date range
-                dateInserted = `[${form.startDate},${form.endDate}]`;
-            }
-        } else if (form.startDate) {
-            // Only start date
-            dateInserted = `>=${form.startDate}`;
-        } else if (form.endDate) {
-            // Only end date.
-            dateInserted = `<=${form.endDate}`;
-        }
-        return dateInserted;
-    };
+    function getAllowedFieldsForDomain(domainKey: ISearchDomain["key"]) {
+        const domain = getDomains().find((pluggableDomain) => {
+            return pluggableDomain.key === domainKey;
+        });
 
-    const makeFilterForm = (form: ISearchFormBase): Partial<ISearchForm> => {
+        return [
+            ...domain!.getAllowedFields(hasPermission),
+            ...SearchService.additionalDomainFilterSchemaFields
+                .filter((additionalSchemaField) => additionalSchemaField.searchDomain === domainKey)
+                .map(({ fieldName }) => fieldName),
+        ];
+    }
+
+    function getFiltersSchemaForDomain(domainKey: ISearchDomain["key"]): JsonSchema {
+        const domain = getDomains().find((pluggableDomain) => {
+            return pluggableDomain.key === domainKey;
+        });
+
+        const domainFilterSchema = domain!.getFilterSchema?.(hasPermission) ?? {
+            type: "object",
+            properties: {},
+            required: [],
+        };
+
+        const extraFields = SearchService.additionalDomainFilterSchemaFields.filter(
+            (additionalSchemaField) => additionalSchemaField.searchDomain === domain!.key,
+        );
+
+        const extraProperties = Object.fromEntries(
+            extraFields.map(({ fieldName, schema }) => {
+                return [fieldName, schema];
+            }),
+        );
+
+        return {
+            ...domainFilterSchema,
+            properties: {
+                ...domainFilterSchema.properties,
+                ...(extraProperties as JsonSchema),
+            },
+        };
+    }
+
+    const makeFilterForm = (form: ISearchForm): ISearchForm => {
         const currentDomain = getCurrentDomain();
-        const filterForm: Partial<ISearchForm> = {};
-        const allowedFields = [...ALL_CONTENT_DOMAIN.getAllowedFields(), ...currentDomain.getAllowedFields()];
-        for (const [key, value] of Object.entries(form)) {
-            if (allowedFields.includes(key)) {
-                filterForm[key] = value;
-            }
-        }
-        return filterForm;
+
+        const allowedFields = Array.from(
+            new Set([
+                ...ALL_CONTENT_DOMAIN.getAllowedFields(hasPermission),
+                ...getAllowedFieldsForDomain(currentDomain.key),
+            ]),
+        );
+        return Object.fromEntries(allowedFields.map((field) => [field, form[field]])) as ISearchForm;
     };
 
     const searchScope = useSearchScope();
@@ -165,16 +189,17 @@ export function SearchFormContextProvider(props: IProps) {
         const currentDomain = getCurrentDomain();
 
         const allowedSorts = currentDomain.getSortValues().map((val) => val.value);
-        const sort = allowedSorts.includes(form.sort) ? form.sort : undefined;
+        const sort = !!form.sort && allowedSorts.includes(form.sort) ? form.sort : undefined;
 
-        const commonQueryEntries: ISearchRequestQuery = {
-            page: form.page,
-            limit: SEARCH_LIMIT_DEFAULT,
-            dateInserted: getDate(form),
-            locale: getCurrentLocale(),
+        const commonQueryEntries = {
+            ...filterForm,
             collapse: true,
-            ...currentDomain.transformFormToQuery(filterForm),
+            ...currentDomain.transformFormToQuery?.(filterForm),
+            limit: SEARCH_LIMIT_DEFAULT,
+            dateInserted: dateRangeToString({ start: form.startDate, end: form.endDate }),
+            locale: getCurrentLocale(),
             sort,
+            ...(form.offset && { offset: form.offset }),
         };
         if (searchScope.value?.value) {
             commonQueryEntries.scope = searchScope.value.value;
@@ -182,6 +207,7 @@ export function SearchFormContextProvider(props: IProps) {
 
         let finalQuery: ISearchRequestQuery;
 
+        // FIXME: these following conditions should probably be moved to different domains' `transformFormToQuery` callbacks
         if (currentDomain.key === MEMBERS_DOMAIN_NAME) {
             finalQuery = {
                 ...commonQueryEntries,
@@ -202,8 +228,8 @@ export function SearchFormContextProvider(props: IProps) {
             };
         } else {
             finalQuery = {
-                domain: form.domain,
                 ...commonQueryEntries,
+                domain: form.domain,
                 insertUserIDs:
                     form.authors && form.authors.length
                         ? form.authors.map((author) => author.value as number)
@@ -226,7 +252,7 @@ export function SearchFormContextProvider(props: IProps) {
 
         // Filter out empty fields.
         Object.entries(finalQuery).forEach(([field, value]) => {
-            if (value === "") {
+            if (value === "" || value === undefined) {
                 delete finalQuery[field];
             }
         });
@@ -244,7 +270,7 @@ export function SearchFormContextProvider(props: IProps) {
      * Generate and store a hash representing the form query and the search source
      */
     const updateHashedEventStore = (form: ISearchForm, source: ISearchSource): void => {
-        const hash = stableObjectHash({ query: form.query, key: source.key });
+        const hash = stableObjectHash({ query: form.query, domain: form.domain, key: source.key });
         setHashedSearchEvents((prevValues) => {
             return [...new Set([...prevValues, hash])];
         });
@@ -256,7 +282,7 @@ export function SearchFormContextProvider(props: IProps) {
      * spams the search button
      */
     const shouldDispatchAnalyticsEvent = (form: ISearchForm, source: ISearchSource): boolean => {
-        const hash = stableObjectHash({ query: form.query, key: source.key });
+        const hash = stableObjectHash({ query: form.query, domain: form.domain, key: source.key });
         return !hashedSearchEvents.includes(hash);
     };
 
@@ -268,7 +294,7 @@ export function SearchFormContextProvider(props: IProps) {
         try {
             const query = buildQuery(form);
 
-            const result = await searchSource.performSearch(query);
+            const result = await searchSource.performSearch(query, form?.pageURL);
 
             dispatch(
                 SearchActions.performSearchACs.done({
@@ -290,7 +316,7 @@ export function SearchFormContextProvider(props: IProps) {
                     new CustomEvent("pageViewWithContext", {
                         detail: getSearchAnalyticsData(form, result, {
                             key: searchSource.key,
-                            label: searchSource.getLabel(),
+                            label: searchSource.label,
                         }),
                     }),
                 );
@@ -343,7 +369,7 @@ export function SearchFormContextProvider(props: IProps) {
     }, []);
 
     const getDefaultFormValues = () => {
-        const domainDefaults = getDomains().map((domain) => domain.getDefaultFormValues());
+        const domainDefaults = getDomains().map((domain) => domain.getDefaultFormValues?.() ?? {});
         const merged = merge({}, DEFAULT_CORE_SEARCH_FORM, ...domainDefaults);
         return merged;
     };
@@ -354,7 +380,7 @@ export function SearchFormContextProvider(props: IProps) {
                 getFilterComponentsForDomain,
                 updateForm,
                 results: state.results,
-                domainSearchResults: state.domainSearchResults,
+                domainSearchResponse: state.domainSearchResponse,
                 form: state.form,
                 search,
                 searchInDomain,
@@ -362,6 +388,7 @@ export function SearchFormContextProvider(props: IProps) {
                 getCurrentDomain,
                 getDefaultFormValues,
                 resetForm,
+                getFiltersSchemaForDomain,
             }}
         >
             {props.children}

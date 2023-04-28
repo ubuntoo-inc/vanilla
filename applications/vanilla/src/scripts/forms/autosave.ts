@@ -1,7 +1,8 @@
-import { siteUrl } from "@library/utility/appUtils";
+import { siteUrl, t, getMeta } from "@library/utility/appUtils";
 import axios from "axios";
 import qs from "qs";
 import debounce from "lodash/debounce";
+import { logDebug } from "@vanilla/utils";
 
 /** Attach auto save function after vanilla is loaded */
 window.onVanillaReady(function () {
@@ -10,8 +11,11 @@ window.onVanillaReady(function () {
         "body.Post #DiscussionForm, body.Discussion .CommentForm",
     ) as HTMLElement;
 
+    const autosaveOn = getMeta("community.drafts.autosave", true);
+
     // Only save drafts when the "save draft" button is present on the form
-    const shouldSaveDrafts = formContainer && !!formContainer.querySelectorAll("#Form_SaveDraft, .DraftButton").length;
+    const shouldSaveDrafts =
+        formContainer && !!formContainer.querySelectorAll("#Form_SaveDraft, .DraftButton").length && autosaveOn;
 
     // Attach listeners to all inputs within
     if (formContainer && shouldSaveDrafts) {
@@ -75,6 +79,46 @@ const generateFormRequestBody = (form: HTMLFormElement): object | null => {
     return null;
 };
 
+// Global used to store initial draft button text value
+window.__DRAFT_KLUDGE__ = "";
+
+/**
+ * This function will update a save draft state in a given form by
+ * disabling the post and save draft buttons, updating the save draft text and
+ * setting the state back to the initial values
+ */
+const setDraftButtonState = (form: HTMLFormElement, state: "save" | "initial") => {
+    if (form) {
+        const draftAnchor = form.querySelector('a[class*="DraftButton"]') as HTMLAnchorElement;
+        const draftInput = form.querySelector('input[class*="DraftButton"]') as HTMLInputElement;
+        const postButton = form.querySelector('input[type="submit"][name*="Post"]') as HTMLInputElement;
+        if (state === "save") {
+            postButton.setAttribute("disabled", true);
+            if (draftInput) {
+                window.__DRAFT_KLUDGE__ = draftInput.value;
+                draftInput.value = t("Saving draft...");
+                draftInput.setAttribute("disabled", true);
+            }
+            if (draftAnchor) {
+                window.__DRAFT_KLUDGE__ = draftAnchor.innerText;
+                draftAnchor.innerText = t("Saving draft...");
+                draftAnchor.setAttribute("disabled", true);
+            }
+        }
+        if (state === "initial") {
+            postButton.removeAttribute("disabled");
+            if (draftInput) {
+                draftInput.value = window.__DRAFT_KLUDGE__;
+                draftInput.removeAttribute("disabled");
+            }
+            if (draftAnchor) {
+                draftAnchor.innerText = window.__DRAFT_KLUDGE__;
+                draftAnchor.removeAttribute("disabled");
+            }
+        }
+    }
+};
+
 /**
  * This debounced function will take a DOM element which contains a form and submit
  * that forms content as a draft to the action specified in the form itself
@@ -119,12 +163,19 @@ const saveDraft = debounce(
 
             // If we have something to send and somewhere to send it
             if (requestBody && endpoint) {
-                const response = await apiv1.post(endpoint, getMergedRequestBody(), { params });
-
+                setDraftButtonState(form, "save");
+                const response = await apiv1
+                    .post(`${window.location.origin}${endpoint}`, getMergedRequestBody(), { params })
+                    .catch((error) => {
+                        setDraftButtonState(form, "initial");
+                        logDebug(error);
+                        return error;
+                    });
                 // Initial forms do not have a draft ID
                 if (draftID.value != response.data["DraftID"]) {
                     draftID.value = response.data["DraftID"] ?? 0;
                 }
+                setDraftButtonState(form, "initial");
             }
         }
     },

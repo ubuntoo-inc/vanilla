@@ -17,22 +17,25 @@ use Vanilla\Utility\SchemaUtils;
  * @deprecated Use DiscussionAnnouncementsWidget instead.
  * @package Vanilla\Forum\Modules
  */
-class AnnouncementWidgetModule extends BaseDiscussionWidgetModule {
-
+class AnnouncementWidgetModule extends BaseDiscussionWidgetModule
+{
     /**
      * @inheritDoc
      */
-    public static function getWidgetName(): string {
+    public static function getWidgetName(): string
+    {
         return "List - Announcements";
     }
 
     /**
      * @inheritDoc
      */
-    public static function getApiSchema(): Schema {
+    public static function getApiSchema(): Schema
+    {
         $apiSchema = parent::getApiSchema();
-        $apiSchema->merge(
+        $apiSchema = $apiSchema->merge(
             SchemaUtils::composeSchemas(
+                self::followedCategorySchema(),
                 self::categorySchema(),
                 self::siteSectionIDSchema(),
                 self::sortSchema(),
@@ -44,11 +47,14 @@ class AnnouncementWidgetModule extends BaseDiscussionWidgetModule {
     }
 
     /**
-     * @inheritDoc
+     * Get the real parameters that we will pass to the API.
+     * @param array|null $params
+     * @return array
      */
-    protected function getRealApiParams(): array {
+    protected function getRealApiParams(?array $params = null): array
+    {
         $apiParams = parent::getRealApiParams();
-        $apiParams['pinned'] = true;
+        $apiParams["pinned"] = true;
 
         return $apiParams;
     }

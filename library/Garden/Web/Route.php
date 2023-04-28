@@ -1,7 +1,7 @@
 <?php
 /**
  * @author Todd Burry <todd@vanillaforums.com>
- * @copyright 2009-2019 Vanilla Forums Inc.
+ * @copyright 2009-2022 Vanilla Forums Inc.
  * @license GPL-2.0-only
  */
 
@@ -9,6 +9,7 @@ namespace Garden\Web;
 
 use Garden\MetaTrait;
 use Vanilla\FeatureFlagHelper;
+use Vanilla\ReflectionHelper;
 
 /**
  * The base class for routes.
@@ -16,7 +17,8 @@ use Vanilla\FeatureFlagHelper;
  * A route maps {@link RequestInterface} instances to callbacks. A single route will analyze the request and return
  * dispatch information or **null** if it can't map the route.
  */
-abstract class Route {
+abstract class Route
+{
     use MetaTrait;
 
     const MAP_ARGS = 0x1; // map to path args
@@ -36,21 +38,24 @@ abstract class Route {
     /**
      * Route constructor.
      */
-    public function __construct() {
+    public function __construct()
+    {
         // This is here so that subclasses can call parent::__construct() to be forwards compatible with any code added later.
     }
 
     /**
      * @return int
      */
-    public function getPriority(): int {
+    public function getPriority(): int
+    {
         return $this->priority;
     }
 
     /**
      * @param int $priority
      */
-    public function setPriority(int $priority): void {
+    public function setPriority(int $priority): void
+    {
         $this->priority = $priority;
     }
 
@@ -63,11 +68,11 @@ abstract class Route {
      * @var array An array of parameter mappings.
      */
     private $mappings = [
-        'query' => Route::MAP_QUERY,
-        'args' => Route::MAP_ARGS | Route::MAP_QUERY,
-        'body' => Route::MAP_BODY,
-        'data' => Route::MAP_ARGS | Route::MAP_QUERY | Route::MAP_BODY,
-        'path' => Route::MAP_PATH,
+        "query" => Route::MAP_QUERY,
+        "args" => Route::MAP_ARGS | Route::MAP_QUERY,
+        "body" => Route::MAP_BODY,
+        "data" => Route::MAP_ARGS | Route::MAP_QUERY | Route::MAP_BODY,
+        "path" => Route::MAP_PATH,
     ];
 
     private $defaults = [];
@@ -80,7 +85,8 @@ abstract class Route {
      *
      * @return bool
      */
-    public function isEnabled(): bool {
+    public function isEnabled(): bool
+    {
         if ($this->featureFlag === null) {
             return true;
         }
@@ -95,7 +101,8 @@ abstract class Route {
      *
      * @param string $themeFeatureFlag
      */
-    public function setFeatureFlag(string $themeFeatureFlag) {
+    public function setFeatureFlag(string $themeFeatureFlag)
+    {
         $this->featureFlag = $themeFeatureFlag;
     }
 
@@ -104,7 +111,8 @@ abstract class Route {
      *
      * @return array Returns the conditions.
      */
-    public function getConstraints() {
+    public function getConstraints()
+    {
         return $this->constraints;
     }
 
@@ -116,7 +124,8 @@ abstract class Route {
      * @param array $constraints An array of conditions that map variable names to **Route::MAP_*** constants.
      * @return $this
      */
-    public function setConstraints(array $constraints) {
+    public function setConstraints(array $constraints)
+    {
         $this->constraints = $constraints;
         return $this;
     }
@@ -127,12 +136,13 @@ abstract class Route {
      * @param \ReflectionParameter $parameter The parameter name to test.
      * @return bool Returns **true** if the parameter has a condition or **false** otherwise.
      */
-    public function hasConstraint(\ReflectionParameter $parameter) {
+    public function hasConstraint(\ReflectionParameter $parameter)
+    {
         if (!isset($this->constraints[strtolower($parameter->getName())])) {
             return false;
         }
         $constraint = $this->constraints[strtolower($parameter->getName())];
-        if (isset($constraint['position']) && $constraint['position'] !== $parameter->getPosition()) {
+        if (isset($constraint["position"]) && $constraint["position"] !== $parameter->getPosition()) {
             return false;
         }
         return true;
@@ -144,11 +154,12 @@ abstract class Route {
      * @param string $name The parameter to attach the condition to.
      * @param callable|string|array $condition Either a callback or a regular expression that can be passed to {@link preg_match()}.
      */
-    public function setConstraint($name, $condition) {
+    public function setConstraint($name, $condition)
+    {
         if (is_callable($condition)) {
-            $constraint = ['callback' => $condition];
+            $constraint = ["callback" => $condition];
         } elseif (is_string($condition)) {
-            $constraint = ['regex' => $condition];
+            $constraint = ["regex" => $condition];
         } else {
             $constraint = $condition;
         }
@@ -163,7 +174,8 @@ abstract class Route {
      * @param string $name The parameter name to get the condition for.
      * @return callable|string|null Returns the condition or **null** if there is no condition.
      */
-    public function getConstraint($name) {
+    public function getConstraint($name)
+    {
         $name = strtolower($name);
 
         if (isset($this->constraints[$name])) {
@@ -178,7 +190,8 @@ abstract class Route {
      *
      * @return array Returns the mappings.
      */
-    public function getMappings() {
+    public function getMappings()
+    {
         return $this->mappings;
     }
 
@@ -190,7 +203,8 @@ abstract class Route {
      * @param array $mappings The new mappings array.
      * @return $this
      */
-    public function setMappings($mappings) {
+    public function setMappings($mappings)
+    {
         $this->mappings = $mappings;
         return $this;
     }
@@ -201,7 +215,8 @@ abstract class Route {
      * @param string $name The name of a parameter.
      * @return int Returns a one or a combination of the **Route::MAP_*** constants or **0** if there is no mapping.
      */
-    public function getMapping($name) {
+    public function getMapping($name)
+    {
         $name = strtolower($name);
         return isset($this->mappings[$name]) ? $this->mappings[$name] : 0;
     }
@@ -212,7 +227,8 @@ abstract class Route {
      * @param string $name The name of the parameter.
      * @param int $value One or a combination of the **Route::MAP_*** constants.
      */
-    public function setMapping($name, $value) {
+    public function setMapping($name, $value)
+    {
         $this->mappings[strtolower($name)] = $value;
     }
 
@@ -227,7 +243,8 @@ abstract class Route {
      * are checked to see if they match the meta values.
      * @return bool Returns **true** if the condition passes or there is no condition. Returns **false** otherwise.
      */
-    protected function testConstraint(\ReflectionParameter $parameter, $value, array $meta = []) {
+    protected function testConstraint(\ReflectionParameter $parameter, $value, array $meta = [])
+    {
         if ($parameter->isDefaultValueAvailable() && $value === $parameter->getDefaultValue()) {
             return true;
         }
@@ -243,7 +260,10 @@ abstract class Route {
             $constraint = $this->constraints[strtolower($parameter->getName())];
 
             // Look for specific rules for the type.
-            $type = $parameter->hasType() && $parameter->getType() instanceof \ReflectionNamedType ? $parameter->getType()->getName() : 'notype';
+            $type =
+                $parameter->hasType() && $parameter->getType() instanceof \ReflectionNamedType
+                    ? $parameter->getType()->getName()
+                    : "notype";
             if (!empty($constraint["$type"])) {
                 $constraint = $constraint["$type"] + $constraint;
             }
@@ -255,10 +275,10 @@ abstract class Route {
                 }
             }
 
-            if (!empty($constraint['callback'])) {
-                return $constraint['callback']($value);
-            } elseif (!empty($constraint['regex'])) {
-                return preg_match($constraint['regex'], $value);
+            if (!empty($constraint["callback"])) {
+                return $constraint["callback"]($value);
+            } elseif (!empty($constraint["regex"])) {
+                return preg_match($constraint["regex"], $value);
             }
         }
         return true;
@@ -272,8 +292,10 @@ abstract class Route {
      * @return bool Returns **true** if the parameter is mapped, or **false** otherwise.
      * @internal This method will be protected again at some point. Do not use.
      */
-    public function isMapped(\ReflectionParameter $param, $type = 0) {
-        if ($param->getClass() !== null && $param->getClass()->implementsInterface(RequestInterface::class)) {
+    public function isMapped(\ReflectionParameter $param, $type = 0)
+    {
+        $class = ReflectionHelper::getClass($param);
+        if ($class !== null && $class->implementsInterface(RequestInterface::class)) {
             $mapping = Route::MAP_REQUEST;
         } elseif (empty($this->mappings[strtolower($param->getName())])) {
             return false;
@@ -283,7 +305,7 @@ abstract class Route {
         if (($mapping & $type) !== $type) {
             return false;
         }
-        if (!$param->isArray() && ($mapping & Route::MAP_PATH) !== Route::MAP_PATH) {
+        if (!ReflectionHelper::isArray($param) && ($mapping & Route::MAP_PATH) !== Route::MAP_PATH) {
             return false;
         }
 
@@ -298,8 +320,10 @@ abstract class Route {
      * @param array $args The parsed path arguments for a method.
      * @return mixed Returns the mapped data or null if there is no data.
      */
-    protected function mapParam(\ReflectionParameter $param, RequestInterface $request, array $args = []) {
-        if ($param->getClass() !== null && $param->getClass()->implementsInterface(RequestInterface::class)) {
+    protected function mapParam(\ReflectionParameter $param, RequestInterface $request, array $args = [])
+    {
+        $class = ReflectionHelper::getClass($param);
+        if ($class !== null && $class->implementsInterface(RequestInterface::class)) {
             return $request;
         }
 
@@ -317,7 +341,7 @@ abstract class Route {
             $result += $args;
         }
         if ($mapping & self::MAP_QUERY) {
-            $result += $request->getQuery() + $this->getDefault('query', []);
+            $result += $request->getQuery() + $this->getDefault("query", []);
         }
         if ($mapping & self::MAP_BODY) {
             $result += $request->getBody();
@@ -326,11 +350,13 @@ abstract class Route {
         return $result;
     }
 
-    public function setDefault($key, $value) {
+    public function setDefault($key, $value)
+    {
         $this->defaults[$key] = $value;
     }
 
-    public function getDefault($key, $default = null) {
+    public function getDefault($key, $default = null)
+    {
         return array_key_exists($key, $this->defaults) ? $this->defaults[$key] : $default;
     }
 
@@ -349,19 +375,20 @@ abstract class Route {
      * @param \ReflectionType $type The type to validate against.
      * @return bool Returns **true** if the type check passes or **false** otherwise.
      */
-    private function validateType($value, \ReflectionType $type): bool {
-        if (in_array($value, ['', null], true)) {
+    private function validateType($value, \ReflectionType $type): bool
+    {
+        if (in_array($value, ["", null], true)) {
             return $type->allowsNull();
         }
 
         // Test against the built in types.
         if ($type instanceof \ReflectionNamedType) {
             switch ($type->getName()) {
-                case 'bool':
+                case "bool":
                     return filter_var($value, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) !== null;
-                case 'int':
+                case "int":
                     return filter_var($value, FILTER_VALIDATE_INT) !== false;
-                case 'float':
+                case "float":
                     return filter_var($value, FILTER_VALIDATE_FLOAT) !== false;
             }
         }
@@ -374,7 +401,8 @@ abstract class Route {
      * @param callable $middleware The middleware to add.
      * @return $this
      */
-    public function addMiddleware(callable $middleware) {
+    public function addMiddleware(callable $middleware)
+    {
         array_unshift($this->middlewares, $middleware);
         return $this;
     }
@@ -384,7 +412,8 @@ abstract class Route {
      *
      * @return callable[] Returns an array of middleware.
      */
-    public function getMiddlewares() {
+    public function getMiddlewares()
+    {
         return $this->middlewares;
     }
 }

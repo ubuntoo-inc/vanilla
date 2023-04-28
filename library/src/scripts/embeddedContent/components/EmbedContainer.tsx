@@ -14,13 +14,14 @@ interface IProps extends DetailedHTMLProps<React.HTMLAttributes<HTMLDivElement>,
     children?: React.ReactNode;
     size?: EmbedContainerSize;
     withPadding?: boolean;
+    withShadow?: boolean;
 }
 
 export const EmbedContainer = forwardRef(function EmbedContainer(props: IProps, ref: React.Ref<HTMLDivElement>) {
-    const { size, withPadding, ...htmlProps } = props;
+    const { size, withPadding, withShadow = true, ...htmlProps } = props;
     const classes = embedContainerClasses();
 
-    const { inEditor, selectSelf } = useEmbedContext();
+    const { inEditor, selectSelf, isSelected } = useEmbedContext();
     return (
         <div
             ref={ref}
@@ -30,12 +31,15 @@ export const EmbedContainer = forwardRef(function EmbedContainer(props: IProps, 
                 if (inEditor) {
                     e.stopPropagation();
                     e.nativeEvent.stopImmediatePropagation();
-                    selectSelf?.();
+                    if (!isSelected) {
+                        e.preventDefault();
+                        selectSelf?.();
+                    }
                 }
             }}
             className={classNames(
                 "embedExternal",
-                classes.makeRootClass(props.size || EmbedContainerSize.MEDIUM, !!inEditor, !!withPadding),
+                classes.makeRootClass(props.size || EmbedContainerSize.MEDIUM, !!inEditor, !!withPadding, !!withShadow),
                 props.className,
             )}
         >

@@ -6,7 +6,7 @@
 import { Mixins } from "@library/styles/Mixins";
 import { singleLineEllipsis, styleUnit } from "@library/styles/styleHelpers";
 import { shadowHelper } from "@library/styles/shadowHelpers";
-import { percent, px } from "csx";
+import { color, percent, px } from "csx";
 import { css } from "@emotion/css";
 import { BorderType } from "@library/styles/styleHelpers";
 import { leaderboardVariables } from "@library/leaderboardWidget/LeaderboardWidget.variables";
@@ -48,8 +48,9 @@ export const leaderboardWidgetClasses = () => {
     const linkStyles = css({
         display: "flex",
         alignItems: "center",
+        ...Mixins.clickable.itemState(),
         ...Mixins.font({
-            color: vars.username.font.color,
+            color: vars.username.font.color ?? color(Mixins.clickable.itemState().color),
         }),
     });
 
@@ -66,22 +67,21 @@ export const leaderboardWidgetClasses = () => {
     });
 
     const userStyles = css({
-        whiteSpace: "nowrap",
         display: "flex",
+        alignItems: "center",
         ...Mixins.padding({
             vertical: 4,
         }),
     });
 
     const usernameStyles = css({
+        flex: 1,
         verticalAlign: "middle",
         display: "inline-block",
-        ...singleLineEllipsis(),
-        maxWidth: `calc(100% - ${vars.profilePhoto.size}px - ${vars.username.margin.horizontal}px)`,
         ...Mixins.margin(vars.username.margin),
         ...Mixins.font({
             ...vars.username.font,
-            lineHeight: px(vars.profilePhoto.size),
+            lineHeight: 1,
         }),
     });
 
@@ -108,7 +108,7 @@ export const leaderboardWidgetClasses = () => {
 
     const cell = css({
         padding: 0,
-        minWidth: styleUnit(100),
+        minWidth: "5ch",
         verticalAlign: "middle",
         textAlign: "right",
         "&:first-of-type": {

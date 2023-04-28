@@ -10,8 +10,8 @@ namespace Vanilla;
 /**
  * Offers utility methods for resizing image files.
  */
-class ImageResizer {
-
+class ImageResizer
+{
     private const EXIF_ORIENTATION_STANDARD = 1;
     private const EXIF_ORIENTATION_MIRROR = 2;
     private const EXIF_ORIENTATION_ROTATE_180 = 3;
@@ -26,15 +26,15 @@ class ImageResizer {
 
     /** @var array */
     protected static $typeExt = [
-        IMAGETYPE_GIF => 'gif',
-        IMAGETYPE_JPEG => 'jpg',
-        IMAGETYPE_PNG => 'png',
-        IMAGETYPE_SWF => 'swf',
-        IMAGETYPE_PSD => 'psd',
-        IMAGETYPE_BMP => 'bmp',
-        IMAGETYPE_TIFF_II => 'tiff',
-        IMAGETYPE_TIFF_MM => 'tiff',
-        IMAGETYPE_ICO => 'ico',
+        IMAGETYPE_GIF => "gif",
+        IMAGETYPE_JPEG => "jpg",
+        IMAGETYPE_PNG => "png",
+        IMAGETYPE_SWF => "swf",
+        IMAGETYPE_PSD => "psd",
+        IMAGETYPE_BMP => "bmp",
+        IMAGETYPE_TIFF_II => "tiff",
+        IMAGETYPE_TIFF_MM => "tiff",
+        IMAGETYPE_ICO => "ico",
     ];
 
     /**
@@ -44,25 +44,42 @@ class ImageResizer {
      * types supported by this class.
      */
     public const ALL_TYPE_EXT = [
-        IMAGETYPE_GIF => 'gif', // 1
-        IMAGETYPE_JPEG => 'jpg', // 2
-        IMAGETYPE_PNG => 'png', // 3
-        IMAGETYPE_SWF => 'swf', // 4
-        IMAGETYPE_PSD => 'psd', // 5
-        IMAGETYPE_BMP => 'bmp', // 6
-        IMAGETYPE_TIFF_II => 'tiff', // 7
-        IMAGETYPE_TIFF_MM => 'tiff', // 8
-        IMAGETYPE_JPC => 'jpc', // 9
-        IMAGETYPE_JP2 => 'jp2', // 10
-        IMAGETYPE_JPX => 'jpx', // 11
-        IMAGETYPE_JB2 => 'jb2', // 12
-        IMAGETYPE_SWC => 'swc', // 13
-        IMAGETYPE_IFF => 'iff', // 14
-        IMAGETYPE_WBMP => 'wbmp', // 15
-        IMAGETYPE_XBM => 'xbm', // 16
-        IMAGETYPE_ICO => 'ico', // 17
-        IMAGETYPE_WEBP => 'webp', // 18
+        IMAGETYPE_GIF => "gif", // 1
+        IMAGETYPE_JPEG => "jpg", // 2
+        IMAGETYPE_PNG => "png", // 3
+        IMAGETYPE_SWF => "swf", // 4
+        IMAGETYPE_PSD => "psd", // 5
+        IMAGETYPE_BMP => "bmp", // 6
+        IMAGETYPE_TIFF_II => "tiff", // 7
+        IMAGETYPE_TIFF_MM => "tiff", // 8
+        IMAGETYPE_JPC => "jpc", // 9
+        IMAGETYPE_JP2 => "jp2", // 10
+        IMAGETYPE_JPX => "jpx", // 11
+        IMAGETYPE_JB2 => "jb2", // 12
+        IMAGETYPE_SWC => "swc", // 13
+        IMAGETYPE_IFF => "iff", // 14
+        IMAGETYPE_WBMP => "wbmp", // 15
+        IMAGETYPE_XBM => "xbm", // 16
+        IMAGETYPE_ICO => "ico", // 17
+        IMAGETYPE_WEBP => "webp", // 18
     ];
+
+    /**
+     * Can the image's filetype be resized?
+     *
+     * @param string $source
+     * @return bool
+     */
+    public function canResize(string $source): bool
+    {
+        $result = getimagesize($source);
+        $srcType = $result[2] ?? null;
+
+        if (in_array($srcType, [IMAGETYPE_GIF, IMAGETYPE_JPEG, IMAGETYPE_PNG])) {
+            return true;
+        }
+        return false;
+    }
 
     /**
      * Resize an image.
@@ -76,13 +93,14 @@ class ImageResizer {
      * - crop: Whether or not to crop the image to maintain the aspect ratio.
      * @return array Returns an array containing the resize information.
      */
-    public function resize($source, $destination, array $options) {
+    public function resize($source, $destination, array $options)
+    {
         if (!file_exists($source)) {
             throw new \InvalidArgumentException("Source file \"$source\" does not exist.", 400);
         }
 
-        list($width, $height, $srcType) = getimagesize($source);
-        if (!in_array($srcType, [IMAGETYPE_GIF, IMAGETYPE_JPEG, IMAGETYPE_PNG])) {
+        [$width, $height, $srcType] = getimagesize($source);
+        if (!$this->canResize($source)) {
             $ext = $this->extFromImageType($srcType);
             throw new \InvalidArgumentException("Cannot resize images of this type ($ext).", 400);
         }
@@ -91,7 +109,7 @@ class ImageResizer {
             $destType = $srcType;
             $destination = $source;
         } else {
-            if (pathinfo($destination, PATHINFO_EXTENSION) === '*') {
+            if (pathinfo($destination, PATHINFO_EXTENSION) === "*") {
                 $destination = substr($destination, 0, -1) . self::$typeExt[$srcType];
             }
             $destType = $this->imageTypeFromExt($destination);
@@ -104,14 +122,16 @@ class ImageResizer {
             case self::EXIF_ORIENTATION_MIRROR_ROTATE_90:
             case self::EXIF_ORIENTATION_ROTATE_270:
             case self::EXIF_ORIENTATION_MIRROR_ROTATE_270:
-                list($width, $height) = [$height, $width];
+                [$width, $height] = [$height, $width];
                 break;
         }
 
-        $resize = $this->calculateResize(['height' => $height, 'width' => $width], $options);
+        $resize = $this->calculateResize(["height" => $height, "width" => $width], $options);
 
         // Avoid processing images that do not need to be resized, reoriented or converted.
-        if (($height <= $resize["height"] && $width <= $resize["width"]) &&
+        if (
+            $height <= $resize["height"] &&
+            $width <= $resize["width"] &&
             (!$orientation || $orientation === self::EXIF_ORIENTATION_STANDARD) &&
             $srcType === $destType
         ) {
@@ -123,7 +143,7 @@ class ImageResizer {
             $srcImage = $this->createImage($source, $srcType);
             $srcImage = $this->reorientImage($srcImage, $orientation);
 
-            $destImage = imagecreatetruecolor($resize['width'], $resize['height']);
+            $destImage = imagecreatetruecolor($resize["width"], $resize["height"]);
             if ($srcType === IMAGETYPE_PNG || $srcType === IMAGETYPE_ICO) {
                 // Set image transparency on target if necessary
                 imagealphablending($destImage, false);
@@ -135,26 +155,26 @@ class ImageResizer {
                 $srcImage,
                 0,
                 0,
-                $resize['sourceX'],
-                $resize['sourceY'],
-                $resize['width'],
-                $resize['height'],
-                $resize['sourceWidth'],
-                $resize['sourceHeight']
+                $resize["sourceX"],
+                $resize["sourceY"],
+                $resize["width"],
+                $resize["height"],
+                $resize["sourceWidth"],
+                $resize["sourceHeight"]
             );
             imagedestroy($srcImage); // destroy ASAP
 
             $this->saveImage($destImage, $destination, $destType, $resize);
         } finally {
-            if (is_resource($srcImage)) {
+            if ($this->isGdResource($srcImage)) {
                 imagedestroy($srcImage);
             }
-            if (is_resource($destImage)) {
+            if ($this->isGdResource($destImage)) {
                 imagedestroy($destImage);
             }
         }
 
-        $resize['path'] = $destination;
+        $resize["path"] = $destination;
         return $resize;
     }
 
@@ -180,18 +200,18 @@ class ImageResizer {
      * - sourceHeight: The sample height of the source image.
      * - jpgQuality: The JPEG image quality as a number from 10-100.
      * - pngQuality: The PNG compression level as a number from 0-9.
-     * - icoSizes: Additional icon sizes for .ico files as an array in the form `[size|'wxh'|[w, h], ...]`.
      */
-    public function calculateResize(array $source, array $options) {
-        if (empty($source['height'])) {
+    public function calculateResize(array $source, array $options)
+    {
+        if (empty($source["height"])) {
             throw new \InvalidArgumentException('Missing argument $source["height"].', 400);
-        } elseif (empty($source['width'])) {
+        } elseif (empty($source["width"])) {
             throw new \InvalidArgumentException('Missing argument $source["width"].', 400);
         }
 
-        $result = $this->calculateWidthAndHeight($source['width'], $source['height'], $options);
+        $result = $this->calculateWidthAndHeight($source["width"], $source["height"], $options);
 
-        $saveOptions = ['jpgQuality', 'pngQuality', 'icoSizes'];
+        $saveOptions = ["jpgQuality", "pngQuality", "icoSizes"];
         foreach ($saveOptions as $opt) {
             if (isset($options[$opt])) {
                 $result[$opt] = $options[$opt];
@@ -210,13 +230,13 @@ class ImageResizer {
      * @return array Returns an array of resizing information.
      * @see \Vanilla\ImageResizer::calculateResize()
      */
-    private function calculateWidthAndHeight($w, $h, $options) {
+    private function calculateWidthAndHeight($w, $h, $options)
+    {
         $options += [
-            'width' => 0,
-            'height' => 0,
-            'crop' => false,
+            "width" => 0,
+            "height" => 0,
+            "crop" => false,
         ];
-
 
         // In the working variables here the following nomenclature is used:
         // - The "s" and "d" prefixes mean "source" and "destination".
@@ -228,9 +248,9 @@ class ImageResizer {
         $sratio = $sw / $sh;
 
         // First check against absolute height and width.
-        $width = $options['width'];
-        $height = $options['height'];
-        $crop = $options['crop'];
+        $width = $options["width"];
+        $height = $options["height"];
+        $crop = $options["crop"];
 
         // Calculate the crop if applicable.
         if ($crop) {
@@ -238,13 +258,13 @@ class ImageResizer {
 
             if ($sratio !== $ratio) {
                 // Try cropping the height first.
-                $dh = $sh = (int)($w / $ratio);
+                $dh = $sh = (int) ($w / $ratio);
                 if ($sh > $h) {
-                    $dw = $sw = (int)($h * $ratio);
+                    $dw = $sw = (int) ($h * $ratio);
                     $dh = $sh = $h;
-                    $sx = (int)(($w - $sw) / 2);
+                    $sx = (int) (($w - $sw) / 2);
                 } else {
-                    $sy = (int)(($h - $sh) / 2);
+                    $sy = (int) (($h - $sh) / 2);
                 }
             }
         } else {
@@ -255,22 +275,22 @@ class ImageResizer {
         if ($width && $dw > $width) {
             // Set the width and then scale the height according to the ratio.
             $dw = $width;
-            $dh = (int)($dw / $ratio);
+            $dh = (int) ($dw / $ratio);
         }
 
         if ($height && $dh > $height) {
             // Set the height and scale the width according to the ratio.
             $dh = $height;
-            $dw = (int)($dh * $ratio);
+            $dw = (int) ($dh * $ratio);
         }
 
         return [
-            'width' => $dw,
-            'height' => $dh,
-            'sourceWidth' => $sw,
-            'sourceHeight' => $sh,
-            'sourceX' => $sx,
-            'sourceY' => $sy
+            "width" => $dw,
+            "height" => $dh,
+            "sourceWidth" => $sw,
+            "sourceHeight" => $sh,
+            "sourceX" => $sx,
+            "sourceY" => $sy,
         ];
     }
 
@@ -282,7 +302,8 @@ class ImageResizer {
      * @param array $resize Resizing configuration details.
      * @return array
      */
-    private function directSave(string $source, string $destination, array $resize = []): array {
+    private function directSave(string $source, string $destination, array $resize = []): array
+    {
         if ($source !== $destination && copy($source, $destination) === false) {
             throw new \Exception("Unable to save image.");
         }
@@ -295,7 +316,8 @@ class ImageResizer {
      *
      * @return array
      */
-    public static function getTypeExt() {
+    public static function getTypeExt()
+    {
         return static::$typeExt;
     }
 
@@ -304,10 +326,11 @@ class ImageResizer {
      *
      * @return array
      */
-    public static function getExtType() {
+    public static function getExtType()
+    {
         $extType = array_flip(static::$typeExt);
-        if (array_key_exists('jpg', $extType)) {
-            $extType['jpeg'] = $extType['jpg'];
+        if (array_key_exists("jpg", $extType)) {
+            $extType["jpeg"] = $extType["jpg"];
         }
         return $extType;
     }
@@ -317,7 +340,8 @@ class ImageResizer {
      *
      * @return string[]
      */
-    final public static function getAllExtensions(): array {
+    final public static function getAllExtensions(): array
+    {
         $extensions = static::getExtType();
         return array_keys($extensions);
     }
@@ -332,9 +356,10 @@ class ImageResizer {
      * @param string $path The file path to examine.
      * @return int Returns one of the **IMAGETYPE_*** constants.
      */
-    public function imageTypeFromExt($path) {
+    public function imageTypeFromExt($path)
+    {
         $ext = strtolower(pathinfo($path, PATHINFO_EXTENSION));
-        if ($ext === 'jpeg') {
+        if ($ext === "jpeg") {
             return IMAGETYPE_JPEG;
         }
 
@@ -353,7 +378,8 @@ class ImageResizer {
      * @return resource Returns a GD resource of the image.
      * @throws \Exception Throws an exception if **$type** not a recognized type.
      */
-    private function createImage($path, $type) {
+    private function createImage($path, $type)
+    {
         switch ($type) {
             case IMAGETYPE_WBMP:
                 $r = imagecreatefromwbmp($path);
@@ -385,10 +411,12 @@ class ImageResizer {
      * @param string $imageType Type of image being read, identified as one of the IMAGETYPE_* constants.
      * @return array|null
      */
-    private function exif(string $source, string $imageType): ?array {
+    private function exif(string $source, string $imageType): ?array
+    {
         $result = null;
 
-        if (function_exists("exif_read_data") &&
+        if (
+            function_exists("exif_read_data") &&
             in_array($imageType, [IMAGETYPE_JPEG, IMAGETYPE_TIFF_II, IMAGETYPE_TIFF_MM], true)
         ) {
             try {
@@ -406,8 +434,9 @@ class ImageResizer {
      * @param int $type One of the __IMAGETYPE_*__ constants.
      * @return string Returns the file extension or **$type** if it was not found.
      */
-    public function extFromImageType($type) {
-        $ext = self::ALL_TYPE_EXT[$type] ?? (string)$type;
+    public function extFromImageType($type)
+    {
+        $ext = self::ALL_TYPE_EXT[$type] ?? (string) $type;
         return $ext;
     }
 
@@ -418,8 +447,9 @@ class ImageResizer {
      * @param ?int $orientation
      * @return resource
      */
-    private function reorientImage($srcImage, ?int $orientation) {
-        if (!is_resource($srcImage)) {
+    private function reorientImage($srcImage, ?int $orientation)
+    {
+        if (!$this->isGdResource($srcImage)) {
             throw new \InvalidArgumentException("Unable to reorient image. Not a valid resource.");
         }
 
@@ -462,20 +492,19 @@ class ImageResizer {
      * @param string $path The target path to save to.
      * @param int $type One of the __IMAGETYPE_*__ constants.
      * @param array $options An array of options from **resize()** to pass through to appropriate save methods.
+     * @psalm-suppress
      */
-    private function saveImage($img, $path, $type, array $options = []) {
+    private function saveImage($img, $path, $type, array $options = [])
+    {
         switch ($type) {
             case IMAGETYPE_GIF:
                 imagegif($img, $path);
                 break;
             case IMAGETYPE_JPEG:
-                imagejpeg($img, $path, empty($options['jpgQuality']) ? 95 : $options['jpgQuality']);
+                imagejpeg($img, $path, $options["jpgQuality"] ?? 95);
                 break;
             case IMAGETYPE_PNG:
-                imagepng($img, $path, empty($options['pngQuality']) ? 9 : $options['pngQuality']);
-                break;
-            case IMAGETYPE_ICO:
-                $this->saveIco($img, $path, $options);
+                imagepng($img, $path, $options["pngQuality"] ?? 9);
                 break;
             default:
                 $ext = self::extFromImageType($type);
@@ -484,53 +513,19 @@ class ImageResizer {
     }
 
     /**
-     * Save an icon (.ico) file.
+     * Check if something is a GdImage or resource.
      *
-     * The GD library cannot save .ico files directly so this method calls out to an external library to do so.
-     *
-     * @param resource $img The GD resource representing the image.
-     * @param string $path The target path of the image.
-     * @param array $options An array of options for saving the image. This is passed through from **resize** and looks at the following option:
-     *
-     * - **icoSizes**: Additional icon sizes for .ico files as an array in the form `[size|'wxh'|[w, h], ...]`.
+     * @param mixed $maybeResource
+     * @return bool
      */
-    private function saveIco($img, $path, $options) {
-        $tmpPath = tempnam(sys_get_temp_dir(), 'ico');
-        $this->saveImage($img, $tmpPath, IMAGETYPE_PNG, $options);
-
-        $sizes = [];
-        if (!empty($options['icoSizes'])) {
-            foreach ($options['icoSizes'] as $size) {
-                if (is_array($size)) {
-                    $sizes[] = $size;
-                } elseif (is_int($size)) {
-                    $sizes[] = [$size, $size];
-                } elseif (preg_match('`^(\d+)x(\d+)$`i', $size, $m)) {
-                    $sizes[] = [(int)$m[1], (int)$m[2]];
-                }
-            }
+    private function isGdResource($maybeResource)
+    {
+        if (class_exists("GdImage")) {
+            // PHP 8.x
+            return is_a($maybeResource, \GdImage::class);
+        } else {
+            // PHP 7.4
+            return is_resource($maybeResource);
         }
-        // Put original size last so it shows up as the size with getimagesize().
-        $sizes[] = [$options['width'], $options['height']];
-
-        $ico = new \PHP_ICO($tmpPath, $sizes);
-        try {
-            $ico->save_ico($path);
-        } finally {
-            unlink($tmpPath);
-        }
-    }
-
-    /**
-     * Should GIFs always be rewritten? GIFs will be rewritten if they exceed limits, regardless of this setting.
-     * Rewriting animated GIFs will result in loss of animation.
-     *
-     * @param bool $alwaysRewriteGif
-     * @return self
-     * @deprecated This is essentially a noop. The target property isn't used.
-     */
-    public function setAlwaysRewriteGif(bool $alwaysRewriteGif): self {
-        $this->alwaysRewriteGif = $alwaysRewriteGif;
-        return $this;
     }
 }

@@ -15,6 +15,7 @@
 /build/*
 !/build/.storybook
 !/build/entries
+/build/entries/dynamic
 !/build/scripts
 !/build/tsconfig.json
 !/build/.htaccess
@@ -32,6 +33,7 @@
 !/conf/constants.php
 !/conf/readme.txt
 /dist/*
+/docker/install.json
 /locales/*
 !/locales/.gitkeep
 /plugins/*
@@ -126,8 +128,10 @@ phpcs-diff.json
 yarn-error.log
 .pnp.*
 .yarn/*
+/bin/scripts/.yarn
 !.yarn/patches
 !.yarn/plugins
 !.yarn/releases
 !.yarn/sdks
 !.yarn/versions
+applications/dashboard/.yarn/*

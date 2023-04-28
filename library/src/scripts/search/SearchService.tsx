@@ -4,12 +4,15 @@
  * @license gpl-2.0-only
  */
 
-import { ISearchForm, ISearchRequestQuery, ISearchSource } from "@library/search/searchTypes";
+import { ISearchForm, ISearchRequestQuery, ISearchResult, ISearchSource } from "@library/search/searchTypes";
 import React from "react";
 import { ISelectBoxItem } from "@library/forms/select/SelectBox";
 import apiv2 from "@library/apiv2";
 import SimplePagerModel from "@library/navigation/SimplePagerModel";
 import { t } from "@vanilla/i18n";
+import Result, { IResult } from "@library/result/Result";
+import { JsonSchema } from "@vanilla/json-schema-forms";
+import { PermissionChecker } from "@library/features/users/Permission";
 
 export class SearchService {
     private static _supportsExtensions = false;
@@ -19,6 +22,7 @@ export class SearchService {
     static supportsExtensions(): boolean {
         return this._supportsExtensions;
     }
+
     static extraFilters = [] as IExtraFilter[];
     static addSearchFilter = (domain: string, filterNode: React.ReactNode) => {
         SearchService.extraFilters.push({
@@ -27,29 +31,31 @@ export class SearchService {
         });
     };
 
+    static additionalDomainFilterSchemaFields = [] as IAdditionalFilterSchemaField[];
+
+    static addFieldToDomainFilterSchema = (
+        searchDomain: IAdditionalFilterSchemaField["searchDomain"],
+        fieldName: IAdditionalFilterSchemaField["fieldName"],
+        schema: IAdditionalFilterSchemaField["schema"],
+    ) => {
+        SearchService.additionalDomainFilterSchemaFields.push({
+            searchDomain,
+            fieldName,
+            schema,
+        });
+    };
+
     static pluggableSources = [] as ISearchSource[];
 
     static addPluggableSource = function (source: ISearchSource) {
         if (!SearchService.pluggableSources.find((content) => content.key === source.key)) {
             SearchService.pluggableSources.push(source);
-            SearchService.createNewController(source.key);
         }
     };
 
-    // Keep a record of abort controllers by key (because we can only use it once)
-    static sourceControllers: Record<ISearchSource["key"], AbortController> = {};
+    static pluggableDomains = [] as Array<ISearchDomain<any, any, any>>; //FIXME: this collection should have a stronger type.
 
-    /**
-     * Create a new controller for a specific key. If you use a controller,
-     * you MUST create a new one or subsequent network requests will not fire.
-     */
-    static createNewController = function (key: ISearchSource["key"]) {
-        SearchService.sourceControllers[key] = new AbortController();
-    };
-
-    static pluggableDomains = [] as ISearchDomain[];
-
-    static addPluggableDomain = (domain: ISearchDomain) => {
+    static addPluggableDomain = function (domain: ISearchDomain<any, any, any>) {
         SearchService.pluggableDomains.push(domain);
     };
 
@@ -65,13 +71,30 @@ export class SearchService {
     };
 }
 
-export const DEFAULT_SEARCH_SOURCE: ISearchSource = {
-    key: "community",
-    getLabel: () => t("Community"),
-    performSearch: async function searchVanilla(query) {
+export const DEFAULT_SEARCH_SOURCE = new (class DefaultSearchSource implements ISearchSource {
+    private abortController: AbortController;
+
+    constructor() {
+        this.abortController = new AbortController();
+    }
+
+    abort() {
+        this.abortController.abort();
+        this.abortController = new AbortController();
+    }
+
+    get key() {
+        return "community";
+    }
+
+    get label() {
+        return t("Community");
+    }
+
+    async performSearch(query: ISearchRequestQuery) {
         const response = await apiv2.get("/search", {
             params: query,
-            signal: SearchService.sourceControllers["community"].signal,
+            signal: this.abortController.signal,
         });
         return {
             results: response.data.map((item) => {
@@ -80,8 +103,8 @@ export const DEFAULT_SEARCH_SOURCE: ISearchSource = {
             }),
             pagination: SimplePagerModel.parseHeaders(response.headers),
         };
-    },
-};
+    }
+})();
 
 SearchService.addPluggableSource(DEFAULT_SEARCH_SOURCE);
 
@@ -97,7 +120,16 @@ interface IExtraFilter {
     filterNode: React.ReactNode;
 }
 
-export interface ISearchDomain {
+interface IAdditionalFilterSchemaField {
+    searchDomain: string;
+    fieldName: string;
+    schema: JsonSchema;
+}
+export interface ISearchDomain<
+    ExtraFormValues extends object = {},
+    ResultType extends object = ISearchResult,
+    ResultComponentProps extends object = IResult,
+> {
     key: string;
     name: string;
     sort: number; // The order the panel appears from left to right
@@ -107,18 +139,20 @@ export interface ISearchDomain {
     getName?(): string;
     PanelComponent: React.ComponentType<any>;
     resultHeader?: React.ReactNode;
-    getAllowedFields(): string[];
+    getAllowedFields: (permissionChecker: PermissionChecker) => string[];
+    getFilterSchema?: (permissionChecker: PermissionChecker) => JsonSchema;
     getRecordTypes(): string[];
-    transformFormToQuery(form: Partial<ISearchForm>): Partial<ISearchRequestQuery>;
-    getDefaultFormValues(): Partial<ISearchForm>;
+    transformFormToQuery?(form: ISearchForm<ExtraFormValues>): Partial<ISearchRequestQuery<ExtraFormValues>>;
+    getDefaultFormValues?(): Partial<ISearchForm<ExtraFormValues>>; //fixme: these don't seem to have any effect on form fields' initial state
     isIsolatedType(): boolean;
     getSortValues(): ISelectBoxItem[];
-    ResultComponent: React.ComponentType<any>;
+    ResultComponent?: React.ComponentType<ResultComponentProps>;
+    mapResultToProps?: (searchResult: ResultType) => ResultComponentProps;
     ResultWrapper?: React.ComponentType<any>;
     MetaComponent?: React.ComponentType<any>;
-    hasSpecificRecord?(form: Partial<ISearchForm>): boolean;
-    getSpecificRecord?(form: Partial<ISearchForm>): number;
-    SpecificRecordPanel?: React.ComponentType<any>;
+    hasSpecificRecord?(form: ISearchForm<ExtraFormValues>): boolean;
+    getSpecificRecord?(form: ISearchForm<ExtraFormValues>): number;
+    SpecificRecordPanelComponent?: React.ComponentType<any>;
     SpecificRecordComponent?: React.ComponentType<any>;
     showSpecificRecordCrumbs?(): boolean; // We could later make this into a config object
 }

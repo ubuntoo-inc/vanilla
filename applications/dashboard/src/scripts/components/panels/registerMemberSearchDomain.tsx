@@ -1,88 +1,111 @@
 /**
- * @copyright 2009-2020 Vanilla Forums Inc.
+ * @copyright 2009-2022 Vanilla Forums Inc.
  * @license GPL-2.0-only
  */
 
 import React from "react";
-import { SearchService } from "@library/search/SearchService";
-import { onReady, t } from "@library/utility/appUtils";
+import { ISearchDomain, SearchService } from "@library/search/SearchService";
+import { t } from "@library/utility/appUtils";
 import { TypeMemberIcon } from "@library/icons/searchIcons";
-import { ISearchForm } from "@library/search/searchTypes";
 import { IMemberSearchTypes } from "@dashboard/components/panels/memberSearchTypes";
 import { MembersSearchFilterPanel } from "@dashboard/components/panels/MembersSearchFilterPanel";
 import { MemberTable } from "@dashboard/components/MemberTable";
-import Member from "@dashboard/components/Member";
-import { hasUserViewPermission } from "@library/features/users/modules/hasUserViewPermission";
+import Member, { IMemberResultProps } from "@dashboard/components/Member";
+import { IUser } from "@library/@types/api/users";
+import { dateRangeToString } from "@library/search/utils";
+import { isDateRange } from "@dashboard/components/panels/FilteredProfileFields";
+import getMemberSearchFilterSchema from "@dashboard/components/panels/getMemberSearchFilterSchema";
+
+interface IMemberSearchResult {
+    userInfo?: IUser;
+}
 
 export function registerMemberSearchDomain() {
-    onReady(() => {
-        if (!hasUserViewPermission()) {
-            // User doesn't have permission to search members.
-            return;
-        }
-        SearchService.addPluggableDomain({
-            key: "members",
-            name: t("Members"),
-            sort: 4,
-            icon: <TypeMemberIcon />,
-            getAllowedFields: () => {
-                return ["username", "email", "roleIDs", "rankIDs"];
-            },
-            transformFormToQuery: (form: ISearchForm<IMemberSearchTypes>) => {
-                const query = {
-                    query: form.query || "",
-                    email: form.email || "",
-                    name: form.username || "",
-                    roleIDs: form.roleIDs,
-                    rankIDs: form.rankIDs,
-                };
+    const membersSearchDomain: ISearchDomain<IMemberSearchTypes, IMemberSearchResult, IMemberResultProps> = {
+        key: "members",
+        name: t("Members"),
+        sort: 4,
+        icon: <TypeMemberIcon />,
+        getAllowedFields: (permissionChecker) => {
+            return ["username", "registered", "roleIDs", "profileFields"].concat(
+                permissionChecker("personalInfo.view") ? ["email"] : [],
+            );
+        },
+        getFilterSchema: (permissionChecker) => getMemberSearchFilterSchema(permissionChecker),
+        transformFormToQuery: function (form) {
+            const query = {
+                name: form.username || "",
+                profileFields: {},
+            };
 
-                return query;
-            },
-            getRecordTypes: () => {
-                return ["user"];
-            },
-            PanelComponent: MembersSearchFilterPanel,
-            resultHeader: null,
-            ResultWrapper: MemberTable,
-            getDefaultFormValues: () => {
-                return {
-                    username: "",
-                    name: "",
-                    email: "",
-                    dateInserted: undefined,
-                    roleIDs: [],
-                };
-            },
-            getSortValues: () => {
-                const sorts = [
-                    {
-                        content: "Recently Active",
-                        value: "-dateLastActive",
-                    },
-                    {
-                        content: "Name",
-                        value: "name",
-                    },
-                    {
-                        content: "Oldest Members",
-                        value: "dateInserted",
-                    },
-                    {
-                        content: "Newest Members",
-                        value: "-dateInserted",
-                    },
-                ];
-                if (SearchService.supportsExtensions()) {
-                    sorts.push({
-                        content: "Posts",
-                        value: "-countPosts",
-                    });
+            // format date ranges
+            for (let key in form) {
+                const property = form[key];
+                if (isDateRange(property)) {
+                    query[key] = dateRangeToString(property);
                 }
-                return sorts;
-            },
-            isIsolatedType: () => true,
-            ResultComponent: Member,
-        });
-    });
+            }
+
+            // format date ranges nested in profile fields
+            for (let key in form.profileFields) {
+                const profileField = form.profileFields[key];
+                if (isDateRange(profileField)) {
+                    query.profileFields[key] = dateRangeToString(profileField);
+                } else {
+                    query.profileFields[key] = form.profileFields[key];
+                }
+            }
+
+            return query;
+        },
+        getRecordTypes: () => {
+            return ["user"];
+        },
+        PanelComponent: MembersSearchFilterPanel,
+        resultHeader: null,
+        ResultWrapper: MemberTable,
+        getDefaultFormValues: () => {
+            return {
+                username: "",
+                name: "",
+                email: "",
+                dateInserted: undefined,
+                roleIDs: [],
+            };
+        },
+        getSortValues: () => {
+            const sorts = [
+                {
+                    content: t("Recently Active"),
+                    value: "-dateLastActive",
+                },
+                {
+                    content: t("Name"),
+                    value: "name",
+                },
+                {
+                    content: t("Oldest Members"),
+                    value: "dateInserted",
+                },
+                {
+                    content: t("Newest Members"),
+                    value: "-dateInserted",
+                },
+            ];
+            if (SearchService.supportsExtensions()) {
+                sorts.push({
+                    content: t("Posts"),
+                    value: "-countPosts",
+                });
+            }
+            return sorts;
+        },
+        isIsolatedType: () => true,
+        ResultComponent: Member,
+        mapResultToProps: (result: IMemberSearchResult): IMemberResultProps => ({
+            userInfo: result.userInfo,
+        }),
+    };
+
+    SearchService.addPluggableDomain(membersSearchDomain);
 }

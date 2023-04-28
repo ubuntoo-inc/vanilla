@@ -11,19 +11,18 @@ import { hasUserViewPermission } from "@library/features/users/modules/hasUserVi
 import { useUser, useCurrentUserID } from "@library/features/users/userHooks";
 import { dropDownClasses } from "@library/flyouts/dropDownStyles";
 import { useDevice, Devices } from "@library/layout/DeviceContext";
-import LazyModal from "@library/modal/LazyModal";
+import Modal from "@library/modal/Modal";
 import ModalSizes from "@library/modal/ModalSizes";
 import { UserCardContext, useUserCardContext } from "@library/features/userCard/UserCard.context";
 import { UserCardMinimal, UserCardSkeleton, UserCardView } from "@library/features/userCard/UserCard.views";
 import { useUniqueID } from "@library/utility/idUtils";
 import Popover, { positionDefault } from "@reach/popover";
 import { t } from "@vanilla/i18n";
-import { useFocusWatcher } from "@vanilla/react-utils";
+import { StackingContextProvider, useFocusWatcher } from "@vanilla/react-utils";
 import React, { useCallback, useRef, useState } from "react";
 import { UserCardError } from "@library/features/userCard/UserCard.views";
-import { hasPermission } from "@library/features/users/Permission";
 import { getMeta } from "@library/utility/appUtils";
-import { StackingContextProvider } from "@library/modal/StackingContext";
+import { usePermissionsContext } from "@library/features/users/PermissionsContext";
 
 interface IProps {
     /** UserID of the user being loaded. */
@@ -46,7 +45,8 @@ interface IProps {
  * Component representing the inner contents of a user card.
  */
 export function UserCard(props: IProps) {
-    if (!hasUserViewPermission()) {
+    const { hasPermission } = usePermissionsContext();
+    if (!hasUserViewPermission(hasPermission)) {
         return <></>;
     }
 
@@ -59,6 +59,8 @@ export function UserCard(props: IProps) {
 }
 
 export function UserCardPopup(props: React.PropsWithChildren<IProps> & { forceOpen?: boolean }) {
+    const { hasPermission } = usePermissionsContext();
+
     const [_isOpen, _setIsOpen] = useState(false);
     const isOpen = props.forceOpen ?? _isOpen;
 
@@ -77,7 +79,7 @@ export function UserCardPopup(props: React.PropsWithChildren<IProps> & { forceOp
     const device = useDevice();
     const forceModal = device === Devices.MOBILE || device === Devices.XS;
 
-    if (!hasUserViewPermission()) {
+    if (!hasUserViewPermission(hasPermission)) {
         return <>{props.children}</>;
     }
 
@@ -106,7 +108,7 @@ export function UserCardPopup(props: React.PropsWithChildren<IProps> & { forceOp
                             )}
                             {forceModal && (
                                 // On mobile we are forced into a modal, which is controlled by the `isVisible` param instead of conditional rendering.
-                                <LazyModal
+                                <Modal
                                     isVisible={isOpen}
                                     size={ModalSizes.SMALL}
                                     exitHandler={() => {
@@ -119,7 +121,7 @@ export function UserCardPopup(props: React.PropsWithChildren<IProps> & { forceOp
                                             setIsOpen(false);
                                         }}
                                     />
-                                </LazyModal>
+                                </Modal>
                             )}
                         </>
                     ),
@@ -141,6 +143,7 @@ export function useUserCardTrigger(): {
     contents: React.ReactNode;
     isOpen?: boolean;
 } {
+    const { hasPermission } = usePermissionsContext();
     const context = useUserCardContext();
 
     const handleFocusChange = useCallback(
@@ -158,7 +161,7 @@ export function useUserCardTrigger(): {
     useFocusWatcher(context.triggerRef, handleFocusChange);
 
     return {
-        props: hasUserViewPermission()
+        props: hasUserViewPermission(hasPermission)
             ? {
                   "aria-controls": context.contentID,
                   "aria-expanded": context.isOpen,
@@ -191,7 +194,10 @@ export function useUserCardTrigger(): {
 /**
  * Calculate a position for the user card that is centered if possible.
  */
-function positionPreferTopMiddle(targetRect?: DOMRect | null, popoverRect?: DOMRect | null): React.CSSProperties {
+export function positionPreferTopMiddle(
+    targetRect?: DOMRect | null,
+    popoverRect?: DOMRect | null,
+): React.CSSProperties {
     const posDefault = positionDefault(targetRect, popoverRect);
 
     const halfPopoverWidth = (popoverRect?.width ?? 0) / 2;
@@ -258,6 +264,7 @@ function UserCardDynamic(props: IProps) {
     const user = useUser({ userID: props.userID });
     const currentUseID = useCurrentUserID();
     const isOwnUser = userFragment?.userID === currentUseID;
+    const { hasPermission } = usePermissionsContext();
     const hasPersonalInfoView = hasPermission("personalInfo.view");
     let bannedPrivateProfile = getMeta("ui.bannedPrivateProfile", "0");
     bannedPrivateProfile = bannedPrivateProfile === "" ? "0" : "1";

@@ -17,7 +17,7 @@
     display: block;
     margin: 0 auto;
     max-width: 100%;
-    width: $embed_width;
+    width: "100%";
     position: relative;
     justify-content: center;
     align-items: center;
@@ -53,7 +53,7 @@
         left: 0;
         right: 0;
         bottom: 0;
-    };
+    }
 }
 
 // Embed Loaders

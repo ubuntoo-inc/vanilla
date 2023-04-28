@@ -1,6 +1,6 @@
 <?php
 /**
- * @copyright 2009-2020 Vanilla Forums Inc.
+ * @copyright 2009-2023 Vanilla Forums Inc.
  * @license GPL-2.0-only
  */
 
@@ -17,8 +17,8 @@ use Vanilla\Logging\LogDecorator;
 /**
  * Allow spoofing a request as a user by sending an X-Vanilla-Spoof header.
  */
-class SpoofMiddleware {
-
+class SpoofMiddleware
+{
     // Permission required to use the spoof header.
     public const PERMISSION = "Garden.Settings.Manage";
 
@@ -44,7 +44,8 @@ class SpoofMiddleware {
      * @param SmartIDMiddleware $smartIDMiddleware
      * @param LogDecorator $logger
      */
-    public function __construct(Gdn_Session $session, SmartIDMiddleware $smartIDMiddleware, LogDecorator $logger) {
+    public function __construct(Gdn_Session $session, SmartIDMiddleware $smartIDMiddleware, LogDecorator $logger)
+    {
         $this->logger = $logger;
         $this->session = $session;
         $this->smartIDMiddleware = $smartIDMiddleware;
@@ -59,7 +60,8 @@ class SpoofMiddleware {
      * @throws PermissionException If current user has invalid permissions to spoof.
      * @throws ClientException If an issue is encountered resolving the user reference.
      */
-    public function __invoke(RequestInterface $request, callable $next) {
+    public function __invoke(RequestInterface $request, callable $next)
+    {
         $value = $request->getHeader(self::SPOOF_HEADER) ?: null;
 
         if ($value !== null) {
@@ -75,6 +77,14 @@ class SpoofMiddleware {
                     "name" => $originalUser->Name ?? null,
                 ],
             ]);
+        }
+
+        if ($this->session->Session) {
+            $attributes = $this->session->Session["Attributes"];
+
+            if (($attributes["SpoofUserID"] ?? false) && ($attributes["SpoofUserName"] ?? false)) {
+                $this->logger->addStaticContextDefaults(["user" => $attributes]);
+            }
         }
 
         $response = Data::box($next($request));
@@ -94,7 +104,8 @@ class SpoofMiddleware {
      * @throws ClientException If user reference is neither an integer or a smart ID.
      * @throws ClientException If a smart ID is provided, but is invalid.
      */
-    private function resolveUserID($ref): int {
+    private function resolveUserID($ref): int
+    {
         if (is_numeric($ref)) {
             return $ref;
         }

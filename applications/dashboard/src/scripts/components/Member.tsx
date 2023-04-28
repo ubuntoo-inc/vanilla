@@ -13,19 +13,18 @@ import { useSection } from "@library/layout/LayoutContext";
 import ProfileLink from "@library/navigation/ProfileLink";
 import { ButtonTypes } from "@library/forms/buttonTypes";
 import { memberListClasses } from "@dashboard/components/MemberList.styles";
-import { IResult } from "@library/result/Result";
 import DateTime from "@library/content/DateTime";
 
-interface IProps extends IResult {
+export interface IMemberResultProps {
     // We always have userInfo on these member queries.
-    userInfo: IUser;
+    userInfo?: IUser;
 }
 
-export default function Member(props: IProps) {
+export default function Member(props: IMemberResultProps) {
     const user = props.userInfo;
     const { isCompact } = useSection();
 
-    if (user == null) {
+    if (!user) {
         return <></>;
     }
 
@@ -34,7 +33,9 @@ export default function Member(props: IProps) {
         <tr className={classes.root}>
             <td className={classNames(classes.cell, classes.isLeft, classes.mainColumn)}>
                 <span className={classes.user}>
-                    <UserPhoto size={UserPhotoSize.MEDIUM} userInfo={user} />
+                    <ProfileLink userFragment={user} isUserCard>
+                        <UserPhoto size={UserPhotoSize.MEDIUM} userInfo={user} />
+                    </ProfileLink>
                     <span
                         className={classNames(classes.mainContent, {
                             [classes.mainContentCompact]: isCompact,
@@ -64,7 +65,7 @@ export default function Member(props: IProps) {
             {!isCompact && (
                 <td className={classNames(classes.cell, classes.posts, classes.postsColumn)}>
                     <span className={classes.minHeight}>
-                        <NumberFormatted value={user.countComments || 0} />
+                        <NumberFormatted value={user.countPosts || 0} />
                     </span>
                 </td>
             )}

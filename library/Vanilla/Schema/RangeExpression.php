@@ -11,7 +11,6 @@ use Garden\Schema\Invalid;
 use Garden\Schema\Schema;
 use Garden\Schema\Validation;
 use Garden\Schema\ValidationException;
-use Vanilla\Utility\ArrayUtils;
 
 /**
  * A chippy little class that represents a range of values. It supports string parsing and data validation.
@@ -39,23 +38,22 @@ use Vanilla\Utility\ArrayUtils;
  * - a,b,c
  * - An array of values.
  */
-class RangeExpression implements \JsonSerializable {
+class RangeExpression implements \JsonSerializable
+{
     public const SCHEMA_DATE = [
-        'type' => 'datetime',
+        "type" => "datetime",
     ];
     public const SCHEMA_INT = [
-        'type' => 'integer',
+        "type" => "integer",
     ];
 
-    private const OPERATORS = [
-        '<', '<=', '=', '>=', '>'
-    ];
+    private const OPERATORS = ["<", "<=", "=", ">=", ">"];
 
     protected const BRACKETS = [
-        '>=' => '[',
-        '>' => '(',
-        '<' => ')',
-        '<=' => ']',
+        ">=" => "[",
+        ">" => "(",
+        "<" => ")",
+        "<=" => "]",
     ];
 
     private const REGEX_SINGLE_VALUE = <<<EOT
@@ -85,7 +83,6 @@ EOT;
 mx
 EOT;
 
-
     /**
      * @var array
      */
@@ -104,7 +101,8 @@ EOT;
      * @param string|null $op2 Filter operator.
      * @param mixed|null $value2 Filter value.
      */
-    public function __construct(string $op, $value, string $op2 = null, $value2 = null) {
+    public function __construct(string $op, $value, string $op2 = null, $value2 = null)
+    {
         $this->addValue($op, $value);
         if ($op2 !== null && $value2 !== null) {
             $this->addValue($op2, $value2);
@@ -119,11 +117,12 @@ EOT;
      * @param bool $keepExpr
      * @return self
      */
-    public static function parse($expr, Schema $valueSchema = null, bool $keepExpr = false) {
+    public static function parse($expr, Schema $valueSchema = null, bool $keepExpr = false)
+    {
         $validation = new Validation();
 
-        if (in_array($expr, ['', null], true)) {
-            throw self::createValidationException('{field} cannot be empty.');
+        if (in_array($expr, ["", null], true)) {
+            throw self::createValidationException("{field} cannot be empty.");
         } elseif (!is_scalar($expr) && !is_array($expr)) {
             throw self::createValidationException("The value is not a valid range expression.");
         }
@@ -131,82 +130,84 @@ EOT;
         if (is_array($expr)) {
             if ($valueSchema !== null) {
                 foreach ($expr as $i => &$value) {
-                    $value = static::validateValue($value, $valueSchema, $validation, "value[$i]", '=');
+                    $value = static::validateValue($value, $valueSchema, $validation, "value[$i]", "=");
                 }
             }
             if ($validation->isValid()) {
-                return new static('=', array_values($expr));
+                return new static("=", array_values($expr));
             }
         } elseif (preg_match(self::REGEX_SINGLE_VALUE, $expr, $m)) {
             // This is a single value expression (ex. '>=10', '<1000')
             [$_, $op, $value] = $m;
 
             $op = self::translateOp($op);
-            $value = static::validateValue($value, $valueSchema, $validation, '', $op);
+            $value = static::validateValue($value, $valueSchema, $validation, "", $op);
 
             if ($validation->isValid()) {
-                return self::creatRangeExpression($keepExpr ? $expr : '', $op, $value);
+                return self::creatRangeExpression($keepExpr ? $expr : "", $op, $value);
             }
-        } elseif (!in_array(substr($expr, 0, 1), ['(', '['], true) &&
-            !in_array(substr($expr, -1), [')', ']'], true) &&
-            strpos($expr, ',') !== false) {
+        } elseif (
+            !in_array(substr($expr, 0, 1), ["(", "["], true) &&
+            !in_array(substr($expr, -1), [")", "]"], true) &&
+            strpos($expr, ",") !== false
+        ) {
             // This is a CSV list.
-            $values = array_map('trim', explode(',', $expr));
+            $values = array_map("trim", explode(",", $expr));
             if ($valueSchema !== null) {
                 foreach ($values as $i => &$value) {
-                    $value = static::validateValue($value, $valueSchema, $validation, "value[$i]", '=');
+                    $value = static::validateValue($value, $valueSchema, $validation, "value[$i]", "=");
                 }
             }
             if ($validation->isValid()) {
-                return self::creatRangeExpression($keepExpr ? $expr : '', '=', $values);
+                return self::creatRangeExpression($keepExpr ? $expr : "", "=", $values);
             }
         } elseif (preg_match(self::REGEX_RANGE, $expr, $m)) {
             // This is a range expression (ex. '1..10', '(1,5]', '2020-05-01..2020-05-14)')
-            [$_, $left, $inner, $right] = $m + array_fill(0, 4, '');
-            $parts = preg_split('`,|\.\.\.?`', $inner);
+            [$_, $left, $inner, $right] = $m + array_fill(0, 4, "");
+            $parts = preg_split("`,|\.\.\.?`", $inner);
             if (count($parts) === 1 && empty($left) && empty($right)) {
                 // This is just a normal value.
-                $expr = static::validateValue($expr, $valueSchema, $validation, '', '=');
+                $expr = static::validateValue($expr, $valueSchema, $validation, "", "=");
 
                 if ($validation->isValid()) {
-                    return self::creatRangeExpression($keepExpr ? $expr : '', '=', $expr);
+                    return self::creatRangeExpression($keepExpr ? $expr : "", "=", $expr);
                 } else {
                     throw new ValidationException($validation);
                 }
             } elseif ($parts === false || count($parts) !== 2) {
-                throw self::createValidationException('{field} range must contain two values.', ['expr' => $inner]);
+                throw self::createValidationException("{field} range must contain two values.", ["expr" => $inner]);
             }
-            $parts = array_map('trim', $parts);
+            $parts = array_map("trim", $parts);
             [$from, $to] = $parts;
 
-            if ($from === '' && $to === '') {
-                throw self::createValidationException('At least one value in the range is required.');
+            if ($from === "" && $to === "") {
+                throw self::createValidationException("At least one value in the range is required.");
             }
 
             $args = [];
-            if ($from !== '') {
-                $op = self::translateOp($left ?: '>=');
-                $from = static::validateValue($from, $valueSchema, $validation, 'from', $op);
+            if ($from !== "") {
+                $op = self::translateOp($left ?: ">=");
+                $from = static::validateValue($from, $valueSchema, $validation, "from", $op);
                 $args[] = $op;
                 $args[] = $from;
             }
 
-            if ($to !== '') {
-                $op = self::translateOp($right ?: '<=');
-                $to = static::validateValue($to, $valueSchema, $validation, 'to', $op);
+            if ($to !== "") {
+                $op = self::translateOp($right ?: "<=");
+                $to = static::validateValue($to, $valueSchema, $validation, "to", $op);
                 $args[] = $op;
                 $args[] = $to;
             }
 
             if ($validation->isValid()) {
-                return self::creatRangeExpression($keepExpr ? $expr : '', ...$args);
+                return self::creatRangeExpression($keepExpr ? $expr : "", ...$args);
             }
         } else {
             // This is just a single value so consider it an equality match.
-            $expr = static::validateValue($expr, $valueSchema, $validation, '', '=');
+            $expr = static::validateValue($expr, $valueSchema, $validation, "", "=");
 
             if ($validation->isValid()) {
-                return self::creatRangeExpression($keepExpr ? $expr : '', '=', $expr);
+                return self::creatRangeExpression($keepExpr ? $expr : "", "=", $expr);
             }
         }
         throw new ValidationException($validation);
@@ -215,10 +216,12 @@ EOT;
     /**
      * Create a range validation schema.
      *
-     * @param Schema $valueSchema
+     * @param Schema|null $valueSchema
+     * @param bool $allowRevalidate
      * @return Schema
      */
-    public static function createSchema($valueSchema = null): Schema {
+    public static function createSchema($valueSchema = null, bool $allowRevalidate = false): Schema
+    {
         if (is_array($valueSchema)) {
             $valueSchema = Schema::parse($valueSchema);
         } elseif ($valueSchema !== null && !$valueSchema instanceof Schema) {
@@ -226,10 +229,15 @@ EOT;
         }
         $class = static::class;
 
-        $schema = new class ([
-            'type' => ['string', "integer", "array"],
-            'format' => 'range-filter'
-        ], $class, $valueSchema) extends Schema {
+        $schema = new class (
+            [
+                "type" => ["string", "integer", "array"],
+                "format" => "range-filter",
+            ],
+            $class,
+            $valueSchema,
+            $allowRevalidate
+        ) extends Schema {
             /**
              * @var Schema|null
              */
@@ -240,21 +248,44 @@ EOT;
              */
             private $class;
 
+            /** @var bool */
+            private bool $allowRevalidate;
+
             /**
              *  {@inheritDoc}
              */
-            public function __construct($schema, string $class, ?Schema $valueSchema = null) {
+            public function __construct(
+                $schema,
+                string $class,
+                ?Schema $valueSchema = null,
+                bool $allowRevalidate = false
+            ) {
                 parent::__construct($schema);
                 $this->valueSchema = $valueSchema;
                 $this->class = $class;
+                $this->allowRevalidate = $allowRevalidate;
             }
 
             /**
              * {@inheritDoc}
              */
-            public function validate($data, $sparse = false) {
-                $r = call_user_func([$this->class, 'parse'], $data, $this->valueSchema);
+            public function validate($data, $sparse = false)
+            {
+                if ($this->allowRevalidate && $data instanceof RangeExpression) {
+                    return $data;
+                }
+                $r = call_user_func([$this->class, "parse"], $data, $this->valueSchema);
                 return $r;
+            }
+
+            /**
+             * Override jsonSerialize to change the type to a value that Open API understands.
+             *
+             * @return string[]
+             */
+            public function jsonSerialize(): array
+            {
+                return ["type" => "string"] + parent::jsonSerialize();
             }
         };
 
@@ -268,7 +299,8 @@ EOT;
      * @param mixed $value
      * @return $this
      */
-    private function addValue(string $op, $value): self {
+    private function addValue(string $op, $value): self
+    {
         $op = self::translateOp($op);
 
         $this->values[$op] = $value;
@@ -285,7 +317,8 @@ EOT;
      * @param string $op The operation being validated against. Some validators might return a different value depending on the operator.
      * @return Invalid|mixed Returns the valid value or invalid.
      */
-    protected static function validateValue($value, ?Schema $schema, Validation $validation, string $name, string $op) {
+    protected static function validateValue($value, ?Schema $schema, Validation $validation, string $name, string $op)
+    {
         if ($schema === null) {
             return $value;
         } else {
@@ -309,9 +342,10 @@ EOT;
      * @param array $context
      * @return ValidationException
      */
-    protected static function createValidationException(string $message, array $context = []): ValidationException {
+    protected static function createValidationException(string $message, array $context = []): ValidationException
+    {
         $validation = new Validation();
-        $validation->addError('', $message, $context);
+        $validation->addError("", $message, $context);
         return new ValidationException($validation);
     }
 
@@ -320,7 +354,8 @@ EOT;
      *
      * @return string[] Returns an associative array with key operators.
      */
-    public function getValues(): array {
+    public function getValues(): array
+    {
         return $this->values;
     }
 
@@ -330,7 +365,8 @@ EOT;
      * @param string $op The operator to inspect.
      * @return mixed|null Returns the filter value or **null** if there isn't one.
      */
-    public function getValue(string $op) {
+    public function getValue(string $op)
+    {
         return $this->values[self::translateOp($op)] ?? null;
     }
 
@@ -341,8 +377,9 @@ EOT;
      * @param mixed $params
      * @return self
      */
-    private static function creatRangeExpression(string $expr, ...$params): self {
-        if ($params[0] === '=' && ($params[1] ?? null) instanceof RangeExpression) {
+    private static function creatRangeExpression(string $expr, ...$params): self
+    {
+        if ($params[0] === "=" && ($params[1] ?? null) instanceof RangeExpression) {
             $r = $params[1];
         } else {
             $r = new static(...$params);
@@ -356,7 +393,8 @@ EOT;
     /**
      * @return string
      */
-    public function jsonSerialize() {
+    public function jsonSerialize()
+    {
         return $this->__toString();
     }
 
@@ -365,7 +403,8 @@ EOT;
      *
      * @return string
      */
-    public function __toString() {
+    public function __toString()
+    {
         if (!empty($this->originalString)) {
             return $this->originalString;
         }
@@ -378,18 +417,18 @@ EOT;
         }
 
         if (count($values) === 1) {
-            if (isset($values['='])) {
-                return is_array($values['=']) ? implode(',', $values['=']) : (string)$values['='];
+            if (isset($values["="])) {
+                return is_array($values["="]) ? implode(",", $values["="]) : (string) $values["="];
             } else {
-                return key($values).current($values);
+                return key($values) . current($values);
             }
-        } elseif (count($values) === 2 && !isset($values['='])) {
-            if (isset($values['>=']) && isset($values['<='])) {
-                return $values['>='].'..'.$values['<='];
+        } elseif (count($values) === 2 && !isset($values["="])) {
+            if (isset($values[">="]) && isset($values["<="])) {
+                return $values[">="] . ".." . $values["<="];
             } else {
-                $left = isset($values['>']) ? '>' : '>=';
-                $right = isset($values['<']) ? '<' : '<=';
-                return self::BRACKETS[$left].$values[$left].','.$values[$right].self::BRACKETS[$right];
+                $left = isset($values[">"]) ? ">" : ">=";
+                $right = isset($values["<"]) ? "<" : "<=";
+                return self::BRACKETS[$left] . $values[$left] . "," . $values[$right] . self::BRACKETS[$right];
             }
         } else {
             $pairs = [];
@@ -411,7 +450,8 @@ EOT;
      * @param mixed $value The value at the operator.
      * @return self
      */
-    public function withValue(string $op, $value): self {
+    public function withValue(string $op, $value): self
+    {
         $range = clone $this;
         $range->originalString = null;
         $range->addValue($op, $value);
@@ -435,7 +475,8 @@ EOT;
      * @param mixed $value The new filter value.
      * @return self
      */
-    public function withFilteredValue(string $op, $value): self {
+    public function withFilteredValue(string $op, $value): self
+    {
         $op = self::translateOp($op);
         $range = clone $this;
         $range->originalString = null;
@@ -445,16 +486,16 @@ EOT;
         } else {
             // If we have a similar op then we need to pick the "stricter" one.
             switch ($op) {
-                case '>':
-                case '>=':
+                case ">":
+                case ">=":
                     $value = max($value, $range->getValue($op));
                     break;
-                case '<':
-                case '<=':
+                case "<":
+                case "<=":
                     $value = min($value, $range->getValue($op));
                     break;
-                case '=':
-                    $value = array_intersect((array)$value, (array)$range->getValue($op));
+                case "=":
+                    $value = array_intersect((array) $value, (array) $range->getValue($op));
                     if (count($value) === 1) {
                         $value = array_pop($value);
                     } else {
@@ -473,24 +514,25 @@ EOT;
      * @param string $op
      * @return string
      */
-    private static function translateOp(string $op): string {
+    private static function translateOp(string $op): string
+    {
         if (!in_array($op, self::OPERATORS)) {
             switch ($op) {
-                case '[':
-                    $op = '>=';
+                case "[":
+                    $op = ">=";
                     break;
-                case ']':
-                    $op = '<=';
+                case "]":
+                    $op = "<=";
                     break;
-                case '(':
-                    $op = '>';
+                case "(":
+                    $op = ">";
                     break;
-                case ')':
-                    $op = '<';
+                case ")":
+                    $op = "<";
                     break;
                 default:
                     $validation = new Validation();
-                    $validation->addError('', '{op} is not a valid operator.', ['op' => $op]);
+                    $validation->addError("", "{op} is not a valid operator.", ["op" => $op]);
                     throw new ValidationException($validation);
             }
         }

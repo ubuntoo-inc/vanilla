@@ -136,10 +136,11 @@ export class Mixins {
             ...Mixins.borderType(borderType, { border, interactiveOutline: config?.interactiveOutline }),
             ...(hasFullOutline || borderType === BorderType.SEPARATOR
                 ? {
-                      "& &:first-of-type:before, & .pageBox:first-of-type:before, & .pageBoxNoCompat:first-of-type:before": {
-                          // Hide separator
-                          display: "none",
-                      },
+                      "& &:first-of-type:before, & .pageBox:first-of-type:before, & .pageBoxNoCompat:first-of-type:before":
+                          {
+                              // Hide separator
+                              display: "none",
+                          },
                       "& &:last-of-type:after, & .pageBox:last-of-type:after, & .pageBoxNoCompat:last-of-type:after": {
                           // Hide separator
                           display: "none",
@@ -265,10 +266,12 @@ export class Mixins {
         return spacingVals;
     }
 
-    static verticallyAlignInContainer(height: number, containerHeight: number): CSSObject {
+    static verticallyAlignInContainer(height: number, parentLineHeight: number): CSSObject {
         return {
-            transform: `translateY(-${Math.abs((containerHeight - height) / 2)}px)`,
+            [`--offset`]: `calc(calc(1em * ${parentLineHeight}) - ${height}px) / 2`,
+            [`--negative-offset`]: `min(var(--offset), -1*var(--offset))`,
             verticalAlign: "top",
+            transform: `translateY(var(--negative-offset))`,
         };
     }
 
@@ -605,7 +608,7 @@ export class Mixins {
                           [cssProperty]: mergedColors.visited?.toString(),
                           ...textDecoration,
                       }
-                    : { undefined },
+                    : (undefined as any),
             };
 
             const final = {

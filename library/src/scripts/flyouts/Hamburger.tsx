@@ -4,13 +4,12 @@
  * @license GPL-2.0-only
  */
 
-import { hasPermission } from "@library/features/users/Permission";
 import { hamburgerClasses } from "@library/flyouts/hamburgerStyles";
 import Button from "@library/forms/Button";
 import { ButtonTypes } from "@library/forms/buttonTypes";
 import { INavigationVariableItem, navigationVariables } from "@library/headers/navigationVariables";
 import { CloseTinyIcon, HamburgerIcon } from "@library/icons/common";
-import LazyModal from "@library/modal/LazyModal";
+import Modal from "@library/modal/Modal";
 import ModalSizes from "@library/modal/ModalSizes";
 import { t } from "@library/utility/appUtils";
 import classNames from "classnames";
@@ -21,6 +20,9 @@ import { notEmpty } from "@vanilla/utils";
 import { DropDownPanelNav } from "@library/flyouts/panelNav/DropDownPanelNav";
 import { IPanelNavItemsProps } from "@library/flyouts/panelNav/PanelNavItems";
 import MobileOnlyNavigation from "@library/headers/MobileOnlyNavigation";
+import { useHamburgerMenuContext } from "@library/contexts/HamburgerMenuContext";
+import { usePermissionsContext } from "@library/features/users/PermissionsContext";
+import { PermissionChecker } from "@library/features/users/Permission";
 
 interface IProps {
     className?: string;
@@ -54,6 +56,23 @@ export default function Hamburger(props: IProps) {
 
     const { showCloseIcon = true } = props;
 
+    // Get all the widget components
+    const { dynamicComponents } = useHamburgerMenuContext();
+
+    // Create a single fragment containing all the widget components
+    const widgetComponents = useMemo(() => {
+        if (dynamicComponents) {
+            return (
+                <>
+                    {Object.values(dynamicComponents).map(({ component }, key) => (
+                        <React.Fragment key={key}>{component}</React.Fragment>
+                    ))}
+                </>
+            );
+        }
+        return <></>;
+    }, [dynamicComponents]);
+
     return (
         <>
             <Button
@@ -66,12 +85,7 @@ export default function Hamburger(props: IProps) {
                     <ScreenReaderContent>{t("Menu")}</ScreenReaderContent>
                 </>
             </Button>
-            <LazyModal
-                scrollable
-                isVisible={isOpen}
-                size={ModalSizes.MODAL_AS_SIDE_PANEL_LEFT}
-                exitHandler={closeDrawer}
-            >
+            <Modal scrollable isVisible={isOpen} size={ModalSizes.MODAL_AS_SIDE_PANEL_LEFT} exitHandler={closeDrawer}>
                 {showCloseIcon && (
                     <Button
                         className={classes.closeButton}
@@ -88,12 +102,13 @@ export default function Hamburger(props: IProps) {
                     <SiteNavigation onClose={() => setIsOpen(false)} navigationItems={props.navigationItems} />
                     <MobileOnlyNavigation />
                     {props.extraNavTop}
+                    {widgetComponents}
                     {props.extraNavBottom}
                     {extraNavGroups.map((GroupComponent, i) => (
                         <GroupComponent key={i} />
                     ))}
                 </div>
-            </LazyModal>
+            </Modal>
         </>
     );
 }
@@ -105,11 +120,12 @@ interface ISiteNavigationProps {
 
 export function varItemToNavTreeItem(
     variableItem: INavigationVariableItem,
+    permissionChecker: PermissionChecker,
     parentID: string = "root",
 ): INavigationTreeItem | null {
     const { permission, name, url, id, children, isHidden, badge } = variableItem;
 
-    if (permission && !hasPermission(permission)) {
+    if (permission && !permissionChecker(permission)) {
         return null;
     }
 
@@ -123,7 +139,8 @@ export function varItemToNavTreeItem(
         recordID: id,
         recordType: "customLink",
         parentID: parentID,
-        children: children?.map((child) => varItemToNavTreeItem(child, id)).filter(notEmpty) ?? [],
+        children:
+            children?.map((child) => varItemToNavTreeItem(child, permissionChecker, parentID)).filter(notEmpty) ?? [],
         sort: 0,
     };
 
@@ -149,13 +166,14 @@ export function getActiveRecord(navTreeItems: INavigationTreeItem[]): IPanelNavI
 }
 
 function SiteNavigation(props: ISiteNavigationProps) {
+    const { hasPermission } = usePermissionsContext();
     const navigationItems =
         props.navigationItems && props.navigationItems.length
             ? props.navigationItems
             : navigationVariables().navigationItems;
 
     const [treeItems, activeRecord] = useMemo(() => {
-        const treeItems = navigationItems.map((item) => varItemToNavTreeItem(item)).filter(notEmpty);
+        const treeItems = navigationItems.map((item) => varItemToNavTreeItem(item, hasPermission)).filter(notEmpty);
         const activeRecord = getActiveRecord(treeItems);
         return [treeItems, activeRecord];
     }, [navigationItems]);

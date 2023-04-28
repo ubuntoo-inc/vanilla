@@ -1,97 +1,124 @@
 /**
- * @copyright 2009-2020 Vanilla Forums Inc.
+ * @copyright 2009-2023 Vanilla Forums Inc.
  * @license GPL-2.0-only
  */
 
 import { IComboBoxOption } from "@library/features/search/SearchBar";
 import { ICrumb } from "@library/navigation/Breadcrumbs";
 import { PublishStatus } from "@library/@types/api/core";
-import { IUserFragment, IUser } from "@library/@types/api/users";
+import { IUserFragment } from "@library/@types/api/users";
 import { ILinkPages } from "@library/navigation/SimplePagerModel";
 import { ISelectBoxItem } from "@library/forms/select/SelectBox";
+import { RecordID } from "@vanilla/utils";
+import { ImageSourceSet } from "@library/utility/appUtils";
 
-export interface ISearchSource {
+export interface ISearchSource<RequestQueryType = ISearchRequestQuery, SearchResultType = ISearchResult> {
     /** Key used to identify the search source */
     key: string;
     /** Translated label for the tab heading */
-    getLabel: () => string;
+    label: string;
     /** Function to make the request and return the mapped results */
-    performSearch: (query: ISearchRequestQuery) => Promise<ISearchResults>;
+    performSearch: (query: RequestQueryType, endpointOverride?: string) => Promise<ISearchResponse<SearchResultType>>;
+    /** Function to abort any in-progress request */
+    abort?: AbortController["abort"];
     /** Sort options available to this search source */
     sortOptions?: ISelectBoxItem[];
     /** The additional search filters this source should make available */
-    queryFilterComponent?: React.ReactNode;
+    queryFilterContent?: React.ReactElement;
     /** The domains that can be searched using this source */
     searchableDomainKeys?: string[];
     /** The default domain searched using this source */
     defaultDomainKey?: string;
 }
 
-export interface ISearchFormBase {
+interface ISearchFormBase {
     domain: string;
-    query: string;
+    query: RecordID;
     name?: string;
     authors?: IComboBoxOption[];
     startDate?: string;
     endDate?: string;
-    page: number;
+    page?: RecordID;
+    /** Used to provide a full URL to refresh the form */
+    pageURL?: string;
+    offset?: RecordID;
     types?: string[];
-    sort: string;
-    initialized: boolean;
+    sort?: string;
+    initialized?: boolean;
     needsResearch?: boolean;
     tags?: string[];
+
+    scope?: string; // moved from ISearchRequestQuery
+    collapse?: boolean; // moved from ISearchRequestQuery
 }
 
-export type ISearchForm<T extends object = {}> = ISearchFormBase & T & Record<string | number, any>;
+export type ISearchForm<ExtraFormValues extends object = {}> = ISearchFormBase & ExtraFormValues;
 
-export interface ISearchRequestQuery extends Omit<ISearchForm, "authors" | "startDate" | "endDate"> {
-    scope?: string;
+export type ISearchRequestQuery<ExtraFormValues extends object = {}> = Omit<
+    ISearchForm<ExtraFormValues>,
+    "authors" | "startDate" | "endDate"
+> & {
     dateInserted?: string;
     insertUserIDs?: number[];
-    collapse?: boolean;
-}
+
+    limit?: RecordID;
+    offset?: RecordID;
+    locale?: string;
+    expand?: string[];
+
+    recordTypes?: string[];
+
+    // fixme: this stuff needs to go
+    categoryIDs?: RecordID[];
+    categoryID?: RecordID;
+    includeChildCategories?: boolean;
+};
 
 export interface ICountResult {
     count: number;
     labelCode: string;
 }
 
-export interface ISearchResult {
+export interface IBaseSearchResult {
     url: string;
-    body: string;
-    excerpt: string;
     name: string;
-    recordID: number;
+    recordID: RecordID;
     recordType: string;
-    type: string;
-    score?: number;
-    breadcrumbs: ICrumb[];
-    labelCodes?: string[];
-    status?: PublishStatus;
+    dateInserted?: string;
+    dateUpdated?: string;
+    body?: string;
+    type?: string;
+    isForeign?: boolean;
+    highlight?: string;
+}
+
+export interface IVanillaSearchResult extends IBaseSearchResult {
     image?: {
         url: string;
         alt: string;
+        urlSrcSet?: ImageSourceSet;
     };
-    dateUpdated: string | null;
-    dateInserted: string;
-    insertUserID?: number;
+    siteDomain?: string;
+    labelCodes?: string[];
+    status?: PublishStatus;
+    breadcrumbs?: ICrumb[];
     insertUser?: IUserFragment;
-    updateUserID?: number;
-    updateUser?: IUserFragment;
-    userInfo?: IUser;
-    counts?: ICountResult[];
-    isForeign?: boolean;
-    discussionID?: number;
     subqueryMatchCount?: number;
     subqueryExtraParams?: Record<string, any>;
-    searchScore?: number;
-    siteID?: number;
-    siteDomain?: string;
-    highlight?: string;
-    source?: string;
 }
 
-export interface ISearchResults {
-    results: ISearchResult[];
+export interface IArticlesSearchResult extends IVanillaSearchResult {
+    excerpt?: string;
+    updateUser?: IUserFragment;
+}
+
+export interface IPlacesSearchResult extends IVanillaSearchResult {
+    counts?: ICountResult[];
+}
+
+export type ISearchResult = IBaseSearchResult & IVanillaSearchResult;
+
+export interface ISearchResponse<SearchResultType = ISearchResult> {
+    results: SearchResultType[];
     pagination: ILinkPages;
 }

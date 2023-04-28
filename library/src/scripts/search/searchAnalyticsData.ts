@@ -1,10 +1,12 @@
 /**
- * @copyright 2009-2021 Vanilla Forums Inc.
+ * @copyright 2009-2023 Vanilla Forums Inc.
  * @license Proprietary
  */
 
-import { ISearchForm, ISearchResults, ISearchSource } from "@library/search/searchTypes";
+import { IComboBoxOption } from "@library/features/search/SearchBar";
+import { ISearchForm, ISearchResponse, ISearchSource } from "@library/search/searchTypes";
 import { getSiteSection } from "@library/utility/appUtils";
+import { ICommunitySearchTypes } from "@vanilla/addon-vanilla/search/communitySearchTypes";
 import { RecordID } from "@vanilla/utils";
 
 interface ITrackedSearchSource {
@@ -20,10 +22,11 @@ export interface IResultAnalyticsData {
     title: string;
     author: { authorID: RecordID[]; authorName: string[] };
     recordType: string[];
-    tag: { tagID: number[]; tagName: string[] };
-    category: { categoryID: number[]; categoryName: string[] };
-    kb: { kbID: number | null; kbName: string };
+    tag: { tagID: RecordID[]; tagName: string[] };
+    category: { categoryID: RecordID[]; categoryName: string[] };
+    kb: { kbID: RecordID | null; kbName: string };
     siteSection: object;
+    siteSectionID: string;
     source?: ITrackedSearchSource;
 }
 
@@ -105,16 +108,20 @@ export const splitSearchTerms = (query: string): ISplitSearchTerms => {
  * Get structured data for search analytics
  */
 export const getSearchAnalyticsData = (
-    form: ISearchForm,
-    results: ISearchResults,
+    form: ISearchForm<
+        ICommunitySearchTypes & {
+            knowledgeBaseOption?: IComboBoxOption; //fixme: Knowledge should add this dynamically
+        }
+    >,
+    response: ISearchResponse,
     searchSource?: ITrackedSearchSource,
 ): IResultAnalyticsData => {
     const resultsWithAnalyticsData: IResultAnalyticsData = {
         type: "search",
         domain: form.domain,
-        searchResults: results.pagination.total ?? -1,
-        searchQuery: splitSearchTerms(form.query),
-        page: results.pagination?.currentPage ?? -1,
+        searchResults: response.pagination.total ?? -1,
+        searchQuery: splitSearchTerms(`${form.query}`),
+        page: response.pagination?.currentPage ?? -1,
         title: form.name ?? "",
         author: {
             authorID: [],
@@ -132,6 +139,7 @@ export const getSearchAnalyticsData = (
         //we don't allow multiple kb filter in search so no mapping here
         kb: { kbID: null, kbName: "" },
         siteSection: getSiteSection(),
+        siteSectionID: getSiteSection().sectionID,
     };
 
     if (form.authors && form.authors.length) {
