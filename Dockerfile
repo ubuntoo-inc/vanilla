@@ -29,20 +29,20 @@ RUN node -v
 RUN apt-get update && apt-get install -y software-properties-common
 RUN add-apt-repository -y ppa:ondrej/php
 RUN apt-get update && apt-get install -y \
-    php7.3 \
-    php7.3-cli \
-    php7.3-common \
-    php7.3-intl \
-    php7.3-dom \
-    php7.3-mbstring \
-    php7.3-curl \
-    php7.3-gd \
-    php7.3-pdo \
-    php7.3-mysqli \
-    php7.3-fpm \
+    php8.2 \
+    php8.2-cli \
+    php8.2-common \
+    php8.2-intl \
+    php8.2-dom \
+    php8.2-mbstring \
+    php8.2-curl \
+    php8.2-gd \
+    php8.2-pdo \
+    php8.2-mysqli \
+    php8.2-fpm \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
-RUN systemctl enable php7.3-fpm
+RUN systemctl enable php8.2-fpm
 
 #VANILLA
 COPY . /ebs/vanilla
@@ -51,7 +51,7 @@ RUN chmod -R 777 /ebs/vanilla/cache
 COPY ./static/start-server.sh /ebs
 COPY ./static/nginx/conf/vanilla-web.conf /ebs/nginx/conf
 COPY ./static/nginx/conf/index.html /ebs/nginx/conf
-RUN service php7.3-fpm restart
+RUN service php8.2-fpm restart
 RUN service nginx restart
 RUN apt-get update && \
     apt-get install -y git && \
