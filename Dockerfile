@@ -42,7 +42,7 @@ RUN apt-get update && apt-get install -y \
     php8.0-fpm \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
-RUN systemctl enable php8.2-fpm
+RUN systemctl enable php8.0-fpm
 
 #VANILLA
 COPY . /ebs/vanilla
@@ -51,7 +51,7 @@ RUN chmod -R 777 /ebs/vanilla/cache
 COPY ./static/start-server.sh /ebs
 COPY ./static/nginx/conf/vanilla-web.conf /ebs/nginx/conf
 COPY ./static/nginx/conf/index.html /ebs/nginx/conf
-RUN service php8.2-fpm restart
+RUN service php8.0-fpm restart
 RUN service nginx restart
 RUN apt-get update && \
     apt-get install -y git && \
