@@ -29,17 +29,17 @@ RUN node -v
 RUN apt-get update && apt-get install -y software-properties-common
 RUN add-apt-repository -y ppa:ondrej/php
 RUN apt-get update && apt-get install -y \
-    php8.2 \
-    php8.2-cli \
-    php8.2-common \
-    php8.2-intl \
-    php8.2-dom \
-    php8.2-mbstring \
-    php8.2-curl \
-    php8.2-gd \
-    php8.2-pdo \
-    php8.2-mysqli \
-    php8.2-fpm \
+    php8.0 \
+    php8.0-cli \
+    php8.0-common \
+    php8.0-intl \
+    php8.0-dom \
+    php8.0-mbstring \
+    php8.0-curl \
+    php8.0-gd \
+    php8.0-pdo \
+    php8.0-mysqli \
+    php8.0-fpm \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 RUN systemctl enable php8.2-fpm
