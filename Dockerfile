@@ -17,11 +17,13 @@ RUN apt-get update && apt-get install -y \
   && rm -rf /var/lib/apt/lists/*
 
 RUN apt-get update && apt-get install -y \
-    nodejs@14 \
+    nodejs \
     npm \
     yarn \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
+
+RUN node -v
 
 #PHP
 RUN apt-get update && apt-get install -y software-properties-common
