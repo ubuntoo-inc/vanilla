@@ -10,6 +10,8 @@ phases:
     commands:
       - node --version
       - yarn --version
+      - yarn config get enableImmutableInstalls
+      - yarn config set -H enableImmutableInstalls false
       - echo Logging in to Amazon ECR...
       - aws --version
       - aws configure list
