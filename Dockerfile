@@ -48,7 +48,7 @@ RUN mkdir -p /ebs/vanilla/cache
 RUN chmod -R 777 /ebs/vanilla/cache
 
 COPY ./static/start-server.sh /ebs
-COPY ./static/nginx/conf/fastcgi.conf /ebs/nginx/conf
+COPY ./static/nginx/conf/fastcgi.conf.tpl /ebs/nginx/conf
 COPY ./static/nginx/conf/vanilla-web.conf /ebs/nginx/conf
 COPY ./static/nginx/conf/index.html /ebs/nginx/conf
 
