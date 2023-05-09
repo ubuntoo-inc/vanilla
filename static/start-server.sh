@@ -6,6 +6,6 @@ sleep 10
 
 #service nginx start
 echo "starting nginx"
-nginx -g "daemon on;"
+service nginx start
 
 tail -f /dev/null
