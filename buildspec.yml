@@ -5,7 +5,7 @@ phases:
     on-failure: ABORT
     runtime-versions:
       php: 7.3
-      nodejs: 12.22
+      nodejs: 12
   pre_build:
     commands:
       - node --version
