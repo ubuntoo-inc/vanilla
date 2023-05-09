@@ -1,8 +1,15 @@
 version: 0.2
 
 phases:
+  install:
+    on-failure: ABORT
+    runtime-versions:
+      php: 7.3
+      nodejs: 12
   pre_build:
     commands:
+      - node --version
+      - yarn --version
       - echo Logging in to Amazon ECR...
       - aws --version
       - aws configure list
@@ -11,6 +18,8 @@ phases:
     commands:
       - echo Building application...
       - echo Build started on `date`
+      - composer self-update --1
+      - composer install
       - docker build --build-arg BASE_IMAGE=$BASE_IMAGE -t $BUILT_IMAGE:latest .
       - docker tag  $BUILT_IMAGE:latest $AWS_ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/$BUILT_IMAGE:latest
   post_build:
