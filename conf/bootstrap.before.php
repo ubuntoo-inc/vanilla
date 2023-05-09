@@ -1,0 +1,1 @@
+../../vanilla-docker/bootstrap.before.php
