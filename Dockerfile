@@ -8,7 +8,6 @@ RUN apt-get update && apt-get install -y \
     wget \
     unzip \
     vim \
-    mysql-client \
     git \
     curl \
     sudo \
@@ -18,7 +17,6 @@ RUN apt-get update && apt-get install -y \
 
 RUN apt-get update && apt-get install -y \
     nodejs \
-    npm \
     yarn \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
@@ -48,17 +46,12 @@ RUN systemctl enable php8.0-fpm
 COPY . /ebs/vanilla
 RUN mkdir -p /ebs/vanilla/cache
 RUN chmod -R 777 /ebs/vanilla/cache
+
 COPY ./static/start-server.sh /ebs
+COPY ./static/nginx/conf/fastcgi.conf /ebs/nginx/conf
 COPY ./static/nginx/conf/vanilla-web.conf /ebs/nginx/conf
 COPY ./static/nginx/conf/index.html /ebs/nginx/conf
-RUN service php8.0-fpm restart
-RUN service nginx restart
-RUN apt-get update && \
-    apt-get install -y git && \
-    curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
-RUN npm i -g yarn
-RUN composer self-update --1
-RUN cd /ebs/vanilla && composer install
+
 RUN chown -R www-data:www-data /ebs/vanilla \
     && chmod 777 /ebs/vanilla/conf \
     && chmod 777 /ebs/vanilla/uploads
