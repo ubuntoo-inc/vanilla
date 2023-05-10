@@ -212,17 +212,11 @@ class UbuntooEmbedFactory extends AbstractEmbedFactory {
      * @throws \Exception If the scrape fails.
      */
     private function queryGraphQL(string $contentUrl, string $operationName, string $query): object {
-        ErrorLogger::warning(
-            "CONTENT URL: $contentUrl",
-            ["post", "embed"]
-        );
+
         $scheme = parse_url($contentUrl, PHP_URL_SCHEME);
         $host = parse_url($contentUrl, PHP_URL_HOST);
         $apiHost = $scheme . '://' . $host;
-        ErrorLogger::warning(
-            "API HOST: $apiHost",
-            ["post", "embed"]
-        );
+
         $graphqlEndpoint = $apiHost .'/api/graphql';
 
         $client = new \GuzzleHttp\Client();
