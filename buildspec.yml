@@ -18,11 +18,11 @@ phases:
       - aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com
   build:
     commands:
+      - mkdir -p /ebs/vanilla
       - echo Building application...
       - echo Build started on `date`
       - composer self-update --1
       - composer install
-      - mkdir -p /ebs/vanilla
       - cp -r . /ebs/vanilla
       - cp ./static/start-server.sh /ebs/start-server.sh
       - chown www-data:www-data -R /ebs
