@@ -58,7 +58,7 @@ RUN chown -R www-data:www-data /ebs/vanilla \
 
 RUN chmod +x /ebs/start-server.sh
 RUN cd /etc/nginx/sites-enabled && unlink default \
-  && cp /ebs/nginx/conf/fastcgi.conf.tpl /etc/nginx/conf/fastcgi.conf.tpl \
+  && cp /ebs/nginx/conf/fastcgi.conf.tpl /etc/nginx/conf \
   && cp /ebs/nginx/conf/vanilla-web.conf /etc/nginx/sites-available \
   && ln -s /etc/nginx/sites-available/vanilla-web.conf /etc/nginx/sites-enabled
 
