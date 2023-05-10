@@ -52,15 +52,15 @@ RUN chmod -R 777 /ebs/vanilla/cache
 #COPY ./static/nginx/conf/vanilla-web.conf /ebs/nginx/conf
 #COPY ./static/nginx/conf/index.html /ebs/nginx/conf
 
-RUN chown -R www-data:www-data /ebs/vanilla \
-    && chmod 777 /ebs/vanilla/conf \
-    && chmod 777 /ebs/vanilla/uploads
+#RUN chown -R www-data:www-data /ebs/vanilla \
+    #&& chmod 777 /ebs/vanilla/conf \
+    #&& chmod 777 /ebs/vanilla/uploads
 
-RUN chmod +x /ebs/start-server.sh
-RUN cd /etc/nginx/sites-enabled && unlink default \
+#RUN chmod +x /ebs/start-server.sh
+#RUN cd /etc/nginx/sites-enabled && unlink default \
   #&& cp /ebs/nginx/conf/fastcgi.conf.tpl /etc/nginx/conf \
-  && cp /ebs/nginx/conf/vanilla-web.conf /etc/nginx/sites-available \
-  && ln -s /etc/nginx/sites-available/vanilla-web.conf /etc/nginx/sites-enabled
+  #&& cp /ebs/nginx/conf/vanilla-web.conf /etc/nginx/sites-available \
+  #&& ln -s /etc/nginx/sites-available/vanilla-web.conf /etc/nginx/sites-enabled
 
 EXPOSE 80
 EXPOSE 443
