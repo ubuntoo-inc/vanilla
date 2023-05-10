@@ -45,7 +45,7 @@ class EmbedConfig
         $this->isVimeoEnabled = $config->get("Garden.Format.Vimeo", false);
         $this->isGettyEnabled = $config->get("Garden.Format.Getty", true);
         $this->legacyEmbedSize = config("Garden.Format.EmbedSize", "normal");
-        $this->$isUbuntooEnabled = $config->get('Garden.Format.Ubuntoo', true);
+        $this->isUbuntooEnabled = $config->get('Garden.Format.Ubuntoo', true);
     }
 
     /**
