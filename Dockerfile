@@ -43,8 +43,8 @@ RUN apt-get update && apt-get install -y \
 RUN systemctl enable php8.0-fpm
 
 #VANILLA
-#COPY . /ebs/vanilla
-#RUN mkdir -p /ebs/vanilla/cache
+COPY . /ebs/vanilla
+RUN mkdir -p /ebs/vanilla/cache
 RUN chmod -R 777 /ebs/vanilla/cache
 
 COPY ./static/start-server.sh /ebs
