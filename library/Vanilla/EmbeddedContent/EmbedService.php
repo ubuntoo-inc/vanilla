@@ -288,8 +288,6 @@ class EmbedService implements EmbedCreatorInterface
         // Normalize the encoding on the URL.
         $url = (string) UrlUtils::normalizeEncoding(Http::createFromString($url));
 
-        console.log($url);
-
         // Check the cache first.
         if (!$force) {
             $cachedEmbed = $this->cache->getCachedEmbed($url);
