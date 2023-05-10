@@ -23,9 +23,9 @@ phases:
       - echo Build started on `date`
       - composer self-update --1
       - composer install
-      - tar cf /tmp/app.tar --exclude='node_module/*' .
-      - cp /tmp/app.tar /ebs && cd /ebs/vanilla && tar xf /tmp/app.tar
-      - cp ./static/start-server.sh /ebs/start-server.sh
+      #- tar cf /tmp/app.tar --exclude='node_module/*' --exclude='.yarn/*' --exclude='vendor/*' .
+      #- cp /tmp/app.tar /ebs && cd /ebs/vanilla && tar xf /tmp/app.tar
+      #- cp ./static/start-server.sh /ebs/start-server.sh
       - docker build --build-arg BASE_IMAGE=$BASE_IMAGE -t $BUILT_IMAGE:latest .
       - docker tag  $BUILT_IMAGE:latest $AWS_ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/$BUILT_IMAGE:latest
   post_build:
