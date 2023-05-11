@@ -4,6 +4,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 #NGINX
 RUN apt-get update && apt-get install -y \
     net-tools \
+    gettext-base \
     nginx \
     wget \
     unzip \
