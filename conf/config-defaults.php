@@ -13,7 +13,7 @@ $Configuration['EnabledPlugins']['jsconnect'] = true;
 $Configuration['EnabledPlugins']['QnA'] = true;
 $Configuration['EnabledPlugins']['Reactions'] = true;
 $Configuration['EnabledPlugins']['Spoof'] = false;
-$Configuration['EnabledPlugins']['pockets'] = true;
+$Configuration['EnabledPlugins']['pockets'] = false;
 $Configuration['EnabledPlugins']['VanillaStats'] = true;
 $Configuration['EnabledPlugins']['ProfileExtender'] = true;
 
