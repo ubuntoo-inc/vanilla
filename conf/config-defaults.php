@@ -9,11 +9,7 @@ $Configuration['EnabledPlugins']['swagger-ui'] = true;
 $Configuration['EnabledApplications']['Dashboard'] = 'dashboard';
 $Configuration['EnabledPlugins']['rich-editor'] = true;
 $Configuration['EnabledPlugins']['FederatedSearch'] = false;
-$Configuration['EnabledPlugins']['jsconnect'] = true;
-$Configuration['EnabledPlugins']['QnA'] = true;
-$Configuration['EnabledPlugins']['Reactions'] = true;
 $Configuration['EnabledPlugins']['Spoof'] = false;
-$Configuration['EnabledPlugins']['pockets'] = false;
 $Configuration['EnabledPlugins']['VanillaStats'] = true;
 $Configuration['EnabledPlugins']['ProfileExtender'] = true;
 
@@ -60,7 +56,7 @@ $Configuration['Garden']['Domain'] = '';
 $Configuration['Garden']['WebRoot'] = false; // You can set this value if you are using htaccess to direct into the application, but the correct webroot isn't being recognized.
 $Configuration['Garden']['StripWebRoot'] = false;
 $Configuration['Garden']['AllowSSL'] = true;
-$Configuration['Garden']['PrivateCommunity'] = true;
+$Configuration['Garden']['PrivateCommunity'] = false;
 $Configuration['Garden']['Forms']['HoneypotName'] = 'hpt';
 $Configuration['Feature']['DeferredLegacyScripts']['Enabled'] = true;
 
