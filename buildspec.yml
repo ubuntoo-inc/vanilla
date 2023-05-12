@@ -19,10 +19,12 @@ phases:
   build:
     commands:
       - mkdir -p /ebs/vanilla
+      - mkdir -p /conf
       - echo Building application...
       - echo Build started on `date`
       - composer self-update --1
       - composer install
+      - cp conf/config-defaults.php /conf
       #- tar cf /tmp/app.tar --exclude='node_module/*' --exclude='.yarn/*' --exclude='vendor/*' .
       #- cp /tmp/app.tar /ebs && cd /ebs/vanilla && tar xf /tmp/app.tar
       #- cp ./static/start-server.sh /ebs/start-server.sh

@@ -4,11 +4,18 @@
 $Configuration = [];
 
 // Auto-enable some addons.
-$Configuration['EnabledPlugins']['stubcontent'] = true;
+$Configuration['EnabledPlugins']['stubcontent'] = false;
 $Configuration['EnabledPlugins']['swagger-ui'] = true;
 $Configuration['EnabledApplications']['Dashboard'] = 'dashboard';
 $Configuration['EnabledPlugins']['rich-editor'] = true;
-$Configuration['EnabledPlugins']['FederatedSearch'] = true;
+$Configuration['EnabledPlugins']['FederatedSearch'] = false;
+$Configuration['EnabledPlugins']['jsconnect'] = true;
+$Configuration['EnabledPlugins']['QnA'] = true;
+$Configuration['EnabledPlugins']['Reactions'] = true;
+$Configuration['EnabledPlugins']['Spoof'] = false;
+$Configuration['EnabledPlugins']['pockets'] = true;
+$Configuration['EnabledPlugins']['VanillaStats'] = true;
+$Configuration['EnabledPlugins']['ProfileExtender'] = true;
 
 // ImageUpload
 $Configuration['ImageUpload']['Limits']['Enabled'] = false;
@@ -53,7 +60,7 @@ $Configuration['Garden']['Domain'] = '';
 $Configuration['Garden']['WebRoot'] = false; // You can set this value if you are using htaccess to direct into the application, but the correct webroot isn't being recognized.
 $Configuration['Garden']['StripWebRoot'] = false;
 $Configuration['Garden']['AllowSSL'] = true;
-$Configuration['Garden']['PrivateCommunity'] = false;
+$Configuration['Garden']['PrivateCommunity'] = true;
 $Configuration['Garden']['Forms']['HoneypotName'] = 'hpt';
 $Configuration['Feature']['DeferredLegacyScripts']['Enabled'] = true;
 
@@ -93,15 +100,20 @@ $Configuration['Garden']['Security']['Hsts']['Preload'] = false;
 $Configuration['Garden']['Security']['Hsts']['MaxAge'] = 15768000;
 
 // Outgoing email.
-$Configuration['Garden']['Email']['UseSmtp'] = false;
-$Configuration['Garden']['Email']['SmtpHost'] = '';
-$Configuration['Garden']['Email']['SmtpUser'] = '';
+$Configuration['Garden']['Email']['UseSmtp'] = true;
+$Configuration['Garden']['Email']['SmtpHost'] = 'smtp.mandrillapp.com';
+$Configuration['Garden']['Email']['SmtpUser'] = 'ubuntoo';
 $Configuration['Garden']['Email']['SmtpPassword'] = '';
-$Configuration['Garden']['Email']['SmtpPort'] = '25';
-$Configuration['Garden']['Email']['SmtpSecurity'] = ''; // ssl/tls
+$Configuration['Garden']['Email']['SmtpPort'] = '587';
+$Configuration['Garden']['Email']['SmtpSecurity'] = 'tls';
 $Configuration['Garden']['Email']['MimeType'] = 'text/plain';
-$Configuration['Garden']['Email']['SupportName'] = 'Support';
-$Configuration['Garden']['Email']['SupportAddress'] = '';
+$Configuration['Garden']['Email']['OmitToName'] = false;
+$Configuration['Garden']['Email']['SupportName'] = 'Ubuntoo';
+$Configuration['Garden']['Email']['SupportAddress'] = 'support@ubuntoo.com';
+
+
+
+
 
 // Contact with the mothership.
 $Configuration['Garden']['UpdateCheckUrl'] = 'https://open.vanillaforums.com/addons/update';
@@ -137,7 +149,7 @@ $Configuration['Garden']['BannedPhoto'] = '/applications/dashboard/design/images
 $Configuration['Garden']['Embed']['CommentsPerPage'] = 50;
 $Configuration['Garden']['Embed']['SortComments'] = 'desc';
 $Configuration['Garden']['Embed']['PageToForum'] = true;
-$Configuration['Garden']['SignIn']['Popup'] = true; // Should the sign-in link pop up or go to it's own page? (SSO requires going to it's own external page)
+$Configuration['Garden']['SignIn']['Popup'] = false; // Should the sign-in link pop up or go to it's own page? (SSO requires going to it's own external page)
 
 // User experience & formatting.
 $Configuration['Garden']['InputFormatter'] = 'Rich'; // Html, BBCode, Markdown, Text, Rich
