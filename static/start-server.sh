@@ -1,7 +1,7 @@
 #!/bin/bash
 
 echo "starting php"
-service php8.0-fpm start
+service php8.0-fpm restart
 
 chown www-data:www-data -R /ebs
 chmod 777 /ebs/vanilla/conf
