@@ -25,7 +25,9 @@ phases:
       - echo Build started on `date`
       - composer self-update --1
       - composer install
+      - cp conf/bootstrap.before.php /efs/conf
       - cp conf/config-defaults.php /efs/conf
+      - cp conf/constants.php /efs/conf
       #- tar cf /tmp/app.tar --exclude='node_module/*' --exclude='.yarn/*' --exclude='vendor/*' .
       #- cp /tmp/app.tar /ebs && cd /ebs/vanilla && tar xf /tmp/app.tar
       #- cp ./static/start-server.sh /ebs/start-server.sh
