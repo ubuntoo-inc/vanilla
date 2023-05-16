@@ -4,7 +4,7 @@ phases:
   install:
     on-failure: ABORT
     runtime-versions:
-      php: 8.1
+      php: 7.4
       nodejs: 12
   pre_build:
     commands:
@@ -23,7 +23,7 @@ phases:
       - mkdir -p /efs/uploads
       - echo Building application...
       - echo Build started on `date`
-      #- composer self-update --1
+      - composer self-update --1
       - composer install
       - cp conf/config-defaults.php /efs/conf
       #- tar cf /tmp/app.tar --exclude='node_module/*' --exclude='.yarn/*' --exclude='vendor/*' .
