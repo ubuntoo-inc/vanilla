@@ -13,18 +13,18 @@
             #fg: "#173042",
             ## Primary background color.
             ## Used for the background of modals, dropdowns, the page, and various containers.
-            #bg: "#212529",
+            #bg: "#173042",
             ## Primary brand color
-            primary: "#111C59",
+            primary: "#6C90C4",
             ## Secondary brand color. Used for various accents.
-            #secondary: "#212529",
+            #secondary: "#173042",
         },
         body: {
             backgroundImage: {
                 ## Body background color.
                 ## You may want to set this rather than setting the main bg.
                 ## Default generated based on mainColors.bg
-                #color: "#212529",
+                #color: "#173042",
             },
         },
         ##
@@ -456,7 +456,7 @@
                 # right: 24,
             },
             # borderRadius: 6,
-            # fg: "#212529",
+            # fg: "#555A62",
             # bg: "#FFFFFF",
             # bgHover: "#FFFFFF",
         },
