@@ -1,0 +1,43 @@
+{
+    "key": "theme-wellstar",
+    "name": "wellstar",
+    "description": "A responsive, asset-compatible Vanilla Forums theme.",
+    "version": "1.0.0",
+    "authors": [
+        {
+            "name": "Jun Ying",
+            "email": "jun.y@ubuntoo.co ",
+            "homepage": "https://ubuntoo.com"
+        },
+        {
+            "name": "",
+            "email": "",
+            "homepage": ""
+        }
+    ],
+    "isResponsive": true,
+    "license": "GPL-2.0-only",
+    "sites": [],
+    "type": "theme",
+    "Features": {
+        "DataDrivenTheme": true
+    },
+    "assets": {
+        "footer": {
+            "type": "twig",
+            "file": "footer.twig"
+        },
+        "header": {
+            "type": "twig",
+            "file": "header.twig"
+        },
+        "styles": {
+            "type": "css",
+            "file": "styles.css"
+        },
+        "variables": {
+            "type": "neon",
+            "file": "variables.neon"
+        }
+    }
+}
